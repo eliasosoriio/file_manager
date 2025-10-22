@@ -26,6 +26,161 @@
 
         body {
             background-color: #f9f9fb;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .bg-white {
+            background-color: #2d3748 !important;
+        }
+
+        body.dark-mode .border-gray-200 {
+            border-color: #4a5568 !important;
+        }
+
+        body.dark-mode .text-gray-700 {
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-mode .text-gray-600 {
+            color: #cbd5e0 !important;
+        }
+
+        body.dark-mode .text-gray-500 {
+            color: #a0aec0 !important;
+        }
+
+        body.dark-mode .text-gray-400 {
+            color: #718096 !important;
+        }
+
+        body.dark-mode .bg-gray-50 {
+            background-color: #2d3748 !important;
+        }
+
+        body.dark-mode .bg-gray-100 {
+            background-color: #374151 !important;
+        }
+
+        body.dark-mode .hover\:bg-gray-50:hover {
+            background-color: #374151 !important;
+        }
+
+        body.dark-mode .hover\:bg-gray-100:hover {
+            background-color: #4a5568 !important;
+        }
+
+        body.dark-mode .sidebar-item:hover {
+            background-color: #374151;
+        }
+
+        body.dark-mode .sidebar-item.active {
+            background-color: #4a5568;
+        }
+
+        body.dark-mode .file-card {
+            background-color: #2d3748 !important;
+            border-color: #4a5568 !important;
+        }
+
+        body.dark-mode .search-dropdown {
+            background-color: #2d3748;
+            border-color: #4a5568;
+        }
+
+        body.dark-mode .context-menu {
+            background-color: #2d3748;
+        }
+
+        body.dark-mode .border-gray-300 {
+            border-color: #4a5568 !important;
+        }
+
+        body.dark-mode input {
+            background-color: #374151 !important;
+            border-color: #4a5568 !important;
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-mode input::placeholder {
+            color: #718096 !important;
+        }
+
+        body.dark-mode .selection-toolbar {
+            background-color: #2d3748;
+        }
+
+        body.dark-mode .file-card.selected {
+            background-color: #4c1d95 !important;
+            border-color: #667eea !important;
+        }
+
+        body.dark-mode .toast {
+            background-color: #2d3748;
+            color: #e2e8f0;
+        }
+
+        /* Dark Mode - Títulos y textos */
+        body.dark-mode .text-gray-900 {
+            color: #f7fafc !important;
+        }
+
+        body.dark-mode .text-gray-800 {
+            color: #e2e8f0 !important;
+        }
+
+        /* Dark Mode - Editor de texto */
+        body.dark-mode textarea {
+            background-color: #1a202c !important;
+            border-color: #4a5568 !important;
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-mode textarea::placeholder {
+            color: #718096 !important;
+        }
+
+        body.dark-mode textarea:focus {
+            border-color: #667eea !important;
+        }
+
+        /* Dark Mode - Modales */
+        body.dark-mode .modal-content {
+            background-color: #2d3748;
+        }
+
+        body.dark-mode .modal-content h3 {
+            color: #f7fafc;
+        }
+
+        body.dark-mode .modal-content p {
+            color: #cbd5e0;
+        }
+
+        body.dark-mode .modal-content input {
+            background-color: #1a202c;
+            color: #e2e8f0;
+            border-color: #4a5568;
+        }
+
+        /* Dark Mode - PDF Viewer */
+        body.dark-mode iframe {
+            border-color: #4a5568 !important;
+            background-color: #1a202c;
+        }
+
+        .theme-toggle {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
         }
 
         .file-card {
@@ -322,13 +477,17 @@
                     </div>
 
                     <div class="flex items-center space-x-3 ml-4">
-                        <button onclick="showCreateModal('file')" class="flex items-center px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                            <i data-lucide="file-plus" class="w-4 h-4 mr-2"></i>
-                            Nuevo archivo
+                        {# Theme Toggle #}
+                        <button id="themeToggle" class="theme-toggle flex items-center justify-center w-10 h-10 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            <i data-lucide="sun" class="w-5 h-5" id="lightIcon"></i>
+                            <i data-lucide="moon" class="w-5 h-5 hidden" id="darkIcon"></i>
                         </button>
-                        <button onclick="showCreateModal('directory')" class="btn-primary flex items-center px-4 py-2 text-sm text-white rounded-lg">
-                            <i data-lucide="folder-plus" class="w-4 h-4 mr-2"></i>
-                            Nueva carpeta
+
+                        <button onclick="showCreateModal('file')" title="Nuevo archivo" class="flex items-center justify-center w-10 h-10 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            <i data-lucide="file-plus" class="w-5 h-5"></i>
+                        </button>
+                        <button onclick="showCreateModal('directory')" title="Nueva carpeta" class="btn-primary flex items-center justify-center w-10 h-10 text-white rounded-lg">
+                            <i data-lucide="folder-plus" class="w-5 h-5"></i>
                         </button>
                     </div>
                 </div>
@@ -1002,6 +1161,55 @@
                 showToast('Error: ' + error.message, 'error');
             }
         }
+
+        // Dark Mode Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const lightIcon = document.getElementById('lightIcon');
+        const darkIcon = document.getElementById('darkIcon');
+
+        // Cookie helper functions
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+            document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        // Check saved theme preference
+        const savedTheme = getCookie('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+            lightIcon.classList.add('hidden');
+            darkIcon.classList.remove('hidden');
+        }
+
+        // Toggle theme
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+
+            if (document.body.classList.contains('dark-mode')) {
+                lightIcon.classList.add('hidden');
+                darkIcon.classList.remove('hidden');
+                setCookie('theme', 'dark', 365);
+            } else {
+                lightIcon.classList.remove('hidden');
+                darkIcon.classList.add('hidden');
+                setCookie('theme', 'light', 365);
+            }
+
+            // Re-render icons for dark mode
+            lucide.createIcons();
+        });
     </script>
 
     {% block javascripts %}{% endblock %}

@@ -17,20 +17,17 @@
                 </div>
             </div>
             <div class="flex items-center space-x-2">
-                <button onclick="deleteCurrentFile()"
-                        class="flex items-center px-4 py-2 text-sm text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition">
-                    <i data-lucide="trash-2" class="w-4 h-4 mr-2"></i>
-                    Eliminar
+                <button onclick="deleteCurrentFile()" title="Eliminar"
+                        class="flex items-center justify-center w-10 h-10 text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
                 </button>
-                <a href="{{ path('app_files_download', {path: file.path}) }}"
-                   class="flex items-center px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                    <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-                    Descargar
+                <a href="{{ path('app_files_download', {path: file.path}) }}" title="Descargar"
+                   class="flex items-center justify-center w-10 h-10 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                    <i data-lucide="download" class="w-5 h-5"></i>
                 </a>
-                <button onclick="saveFile()"
-                        class="btn-primary flex items-center px-4 py-2 text-sm text-white rounded-lg">
-                    <i data-lucide="save" class="w-4 h-4 mr-2"></i>
-                    Guardar
+                <button onclick="saveFile()" title="Guardar"
+                        class="btn-primary flex items-center justify-center w-10 h-10 text-white rounded-lg">
+                    <i data-lucide="save" class="w-5 h-5"></i>
                 </button>
             </div>
         </div>
@@ -64,19 +61,26 @@
             {% if file.extension in ['jpg', 'jpeg', 'png', 'gif', 'webp'] %}
                 {# Image Preview #}
                 <div class="text-center">
-                    <img src="{{ path('app_files_download', {path: file.path}) }}"
+                    <img src="{{ path('app_files_view', {path: file.path}) }}"
                          alt="{{ file.name }}"
                          class="max-w-full h-auto rounded-lg shadow-lg mx-auto">
                 </div>
             {% elseif file.extension in ['pdf'] %}
                 {# PDF Preview #}
-                <div class="text-center">
-                    <p class="text-gray-600 mb-4">Vista previa de PDF</p>
-                    <a href="{{ path('app_files_download', {path: file.path}) }}"
-                       class="inline-flex items-center px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
-                        <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-                        Descargar PDF
-                    </a>
+                <div class="pdf-viewer">
+                    <iframe
+                        src="{{ path('app_files_view', {path: file.path}) }}"
+                        class="w-full rounded-lg border border-gray-300"
+                        style="height: 800px; min-height: 600px;"
+                        frameborder="0">
+                    </iframe>
+                    <div class="text-center mt-4">
+                        <a href="{{ path('app_files_download', {path: file.path}) }}" download
+                           class="inline-flex items-center px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
+                            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                            Descargar PDF
+                        </a>
+                    </div>
                 </div>
             {% else %}
                 {# Text Editor #}

@@ -33,6 +33,9 @@ COPY . .
 # Ahora ejecutar los scripts de Composer
 RUN composer run-script post-install-cmd || true
 
+# Cambiar UID/GID de www-data para que coincida con el usuario del host
+RUN usermod -u 1000 www-data && groupmod -g 1000 www-data
+
 # Crear directorios necesarios y establecer permisos
 RUN mkdir -p var/cache var/log \
     && chown -R www-data:www-data /var/www/html \

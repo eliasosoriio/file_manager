@@ -203,6 +203,12 @@ class FileManager
         $sourceFullPath = $this->getFullPath($sourcePath);
         $destFullPath = $this->getFullPath($destinationPath);
 
+        // If destination is a directory, move the source INTO that directory
+        if (is_dir($destFullPath)) {
+            $sourceFilename = basename($sourceFullPath);
+            $destFullPath = rtrim($destFullPath, '/') . '/' . $sourceFilename;
+        }
+
         // If destination exists, generate a unique name
         $destFullPath = $this->getUniquePath($destFullPath);
 

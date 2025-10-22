@@ -286,6 +286,36 @@ class FileController extends AbstractController
         }
     }
 
+    #[Route('/view', name: 'app_files_view', methods: ['GET'])]
+    public function view(Request $request): Response
+    {
+        $path = $request->query->get('path', '');
+
+        if (empty($path)) {
+            throw $this->createNotFoundException('File not found');
+        }
+
+        try {
+            $fullPath = $this->fileManager->getBasePath() . '/' . ltrim($path, '/');
+
+            if (!file_exists($fullPath) || !is_file($fullPath)) {
+                throw $this->createNotFoundException('File not found');
+            }
+
+            $response = new BinaryFileResponse($fullPath);
+
+            // Mostrar inline en el navegador (no forzar descarga)
+            $response->setContentDisposition(
+                \Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_INLINE,
+                basename($fullPath)
+            );
+
+            return $response;
+        } catch (\Exception $e) {
+            throw $this->createNotFoundException('File not found');
+        }
+    }
+
     #[Route('/save', name: 'app_files_save', methods: ['POST'])]
     public function save(Request $request): JsonResponse
     {
