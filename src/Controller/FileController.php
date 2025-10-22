@@ -35,11 +35,18 @@ class FileController extends AbstractController
             // Get breadcrumbs
             $breadcrumbs = $this->getBreadcrumbs($path);
 
+            // Get statistics only on root path
+            $statistics = null;
+            if (empty($path)) {
+                $statistics = $this->fileManager->getStatistics();
+            }
+
             return $this->render('files/index.html.twig', [
                 'files' => $files,
                 'currentPath' => $path,
                 'breadcrumbs' => $breadcrumbs,
                 'recentHistory' => $recentHistory,
+                'statistics' => $statistics,
             ]);
         } catch (\Exception $e) {
             $this->addFlash('error', $e->getMessage());

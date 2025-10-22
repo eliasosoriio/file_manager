@@ -425,6 +425,53 @@ class FileManager
         $this->entityManager->flush();
     }
 
+    /**
+     * Get statistics about files in the base path
+     */
+    public function getStatistics(): array
+    {
+        $stats = [
+            'totalFiles' => 0,
+            'totalDirectories' => 0,
+            'totalSize' => 0,
+            'filesByExtension' => [],
+        ];
+
+        if (!$this->filesystem->exists($this->basePath)) {
+            return $stats;
+        }
+
+        try {
+            $finder = new Finder();
+            $finder->in($this->basePath)->ignoreDotFiles(false);
+
+            foreach ($finder as $file) {
+                if ($file->isFile()) {
+                    $stats['totalFiles']++;
+                    $stats['totalSize'] += $file->getSize();
+
+                    $ext = strtolower($file->getExtension());
+                    if ($ext) {
+                        if (!isset($stats['filesByExtension'][$ext])) {
+                            $stats['filesByExtension'][$ext] = 0;
+                        }
+                        $stats['filesByExtension'][$ext]++;
+                    }
+                } elseif ($file->isDir()) {
+                    $stats['totalDirectories']++;
+                }
+            }
+
+            // Sort by count descending and take top 5
+            arsort($stats['filesByExtension']);
+            $stats['filesByExtension'] = array_slice($stats['filesByExtension'], 0, 5, true);
+        } catch (\Exception $e) {
+            // Si hay error (permisos, etc), devolver stats vacías
+        }
+
+        return $stats;
+    }
+
     public function formatSize(?int $bytes): string
     {
         if ($bytes === null) return '-';

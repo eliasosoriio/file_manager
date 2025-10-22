@@ -18,7 +18,71 @@
         {% endfor %}
     </nav>
 
-    {# Files Grid #}
+    {# Statistics - Only show on root path #}
+    {% if statistics %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {# Total Files #}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 uppercase tracking-wider">Archivos</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ statistics.totalFiles|number_format(0, ',', '.') }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i data-lucide="file" class="w-6 h-6 text-blue-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            {# Total Directories #}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 uppercase tracking-wider">Carpetas</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ statistics.totalDirectories|number_format(0, ',', '.') }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <i data-lucide="folder" class="w-6 h-6 text-indigo-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            {# Total Size #}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 uppercase tracking-wider">Espacio total</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ (statistics.totalSize / 1024 / 1024 / 1024)|number_format(2) }} GB</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i data-lucide="hard-drive" class="w-6 h-6 text-purple-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            {# Top File Type #}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-500 uppercase tracking-wider">Tipos más comunes</p>
+                        <div class="mt-2 space-y-1">
+                            {% for ext, count in statistics.filesByExtension|slice(0, 3) %}
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-gray-900 font-medium uppercase">{{ ext }}</span>
+                                    <span class="text-gray-500">{{ count }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center ml-4">
+                        <i data-lucide="file-type" class="w-6 h-6 text-green-600"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {# Files List #}
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {% if files is empty %}
             <div class="p-12 text-center">
@@ -26,7 +90,7 @@
                 <p class="text-gray-500">Esta carpeta está vacía</p>
             </div>
         {% else %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-6">
+            <div class="divide-y divide-gray-200">
                 {% for file in files %}
                     {% include 'files/_file_item.html.twig' with {'file': file} %}
                 {% endfor %}
