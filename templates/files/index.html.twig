@@ -149,6 +149,37 @@
         </div>
     {% endif %}
 
+    {# Notes - Only show on root path #}
+    {% if currentPath == '' %}
+        <div class="mb-6">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+                <i data-lucide="sticky-note" class="w-4 h-4 mr-2"></i>
+                Notas rápidas
+            </h2>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <textarea
+                    id="noteContent"
+                    class="w-full h-64 p-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 resize-y"
+                    placeholder="Escribe tus notas aquí..."
+                >{{ note.content }}</textarea>
+                <div class="mt-3 flex items-center justify-between">
+                    <div class="text-xs text-gray-500">
+                        {% if note.updatedAt %}
+                            Última actualización: {{ note.updatedAt|date('d/m/Y H:i') }}
+                        {% else %}
+                            Sin guardar
+                        {% endif %}
+                    </div>
+                    <button onclick="saveNote()" class="btn-primary flex items-center px-4 py-2 text-sm text-white rounded-lg">
+                        <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+                        Guardar (Ctrl+S)
+                    </button>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     {# Files List #}
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {% if files is empty %}
@@ -167,9 +198,53 @@
 </div>
 
 <script>
-    document.getElementById('currentPath').value = '{{ currentPath }}';
+    // Set current path if element exists
+    const currentPathInput = document.getElementById('currentPath');
+    if (currentPathInput) {
+        currentPathInput.value = '{{ currentPath }}';
+    }
 
     // Re-initialize Lucide icons after content load
     setTimeout(() => lucide.createIcons(), 100);
+</script>
+
+<script>
+    // Notes save functionality - Global scope
+    async function saveNote() {
+        const noteContent = document.getElementById('noteContent');
+        if (!noteContent) return;
+
+        const content = noteContent.value;
+
+        try {
+            const response = await fetch('{{ path('app_note_save') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: content })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('Nota guardada correctamente', 'success');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast(data.error || 'Error al guardar nota', 'error');
+            }
+        } catch (error) {
+            showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    // Keyboard shortcut for notes
+    const noteContent = document.getElementById('noteContent');
+    if (noteContent) {
+        noteContent.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveNote();
+            }
+        });
+    }
 </script>
 {% endblock %}

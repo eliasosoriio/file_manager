@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Repository\FileHistoryRepository;
+use App\Repository\NoteRepository;
 use App\Service\FileManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,6 +18,7 @@ class FileController extends AbstractController
     public function __construct(
         private FileManager $fileManager,
         private FileHistoryRepository $historyRepository,
+        private NoteRepository $noteRepository,
         private array $shortcuts = []
     ) {
         // Obtener shortcuts de la configuración
@@ -41,12 +43,16 @@ class FileController extends AbstractController
                 $statistics = $this->fileManager->getStatistics();
             }
 
+            // Get note
+            $note = $this->noteRepository->getNote();
+
             return $this->render('files/index.html.twig', [
                 'files' => $files,
                 'currentPath' => $path,
                 'breadcrumbs' => $breadcrumbs,
                 'recentHistory' => $recentHistory,
                 'statistics' => $statistics,
+                'note' => $note,
             ]);
         } catch (\Exception $e) {
             $this->addFlash('error', $e->getMessage());
@@ -361,6 +367,27 @@ class FileController extends AbstractController
             $info['modifiedFormatted'] = date('Y-m-d H:i:s', $info['modified']);
 
             return $this->json($info);
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    #[Route('/note/save', name: 'app_note_save', methods: ['POST'])]
+    public function saveNote(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $content = $data['content'] ?? '';
+
+        try {
+            $note = $this->noteRepository->getNote();
+            $note->setContent($content);
+            $this->noteRepository->save($note);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Nota guardada',
+                'updatedAt' => $note->getUpdatedAt()->format('d/m/Y H:i'),
+            ]);
         } catch (\Exception $e) {
             return $this->json(['error' => $e->getMessage()], 500);
         }
