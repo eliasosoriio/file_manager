@@ -9,6 +9,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 #[Route('/tasks')]
 class TaskController extends AbstractController
@@ -224,6 +226,58 @@ class TaskController extends AbstractController
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    #[Route('/export-pdf', name: 'app_tasks_export_pdf', methods: ['GET'])]
+    public function exportPdf(Request $request): Response
+    {
+        $date = $request->query->get('date', date('Y-m-d'));
+
+        try {
+            // Get tasks for the specified date
+            $qb = $this->taskRepository->createQueryBuilder('t')
+                ->where('t.date = :date')
+                ->setParameter('date', new \DateTime($date))
+                ->orderBy('t.createdAt', 'ASC');
+
+            $tasks = $qb->getQuery()->getResult();
+
+            // Calculate total hours
+            $totalSeconds = $this->taskRepository->getTotalHoursByDay($date);
+            $totalHours = floor($totalSeconds / 3600);
+            $totalMinutes = floor(($totalSeconds % 3600) / 60);
+
+            // Render HTML for PDF
+            $html = $this->renderView('tasks/pdf.html.twig', [
+                'tasks' => $tasks,
+                'date' => new \DateTime($date),
+                'totalHours' => $totalHours,
+                'totalMinutes' => $totalMinutes,
+            ]);
+
+            // Configure Dompdf
+            $options = new Options();
+            $options->set('isHtml5ParserEnabled', true);
+            $options->set('isRemoteEnabled', true);
+            $options->set('defaultFont', 'DejaVu Sans');
+
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            // Output PDF
+            return new Response(
+                $dompdf->output(),
+                Response::HTTP_OK,
+                [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => sprintf('attachment; filename="tareas_%s.pdf"', $date),
+                ]
+            );
+        } catch (\Exception $e) {
+            return new Response('Error al generar PDF: ' . $e->getMessage(), 500);
         }
     }
 }
