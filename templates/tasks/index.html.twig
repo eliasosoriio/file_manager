@@ -1,0 +1,327 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Tareas{% endblock %}
+
+{% block body %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Gestor de Tareas</h1>
+        <button onclick="showCreateTaskModal()" class="btn-primary flex items-center px-4 py-2 text-sm text-white rounded-lg">
+            <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+            Nueva Tarea
+        </button>
+    </div>
+
+    {% if tasksGrouped is empty %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <i data-lucide="check-circle" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+            <p class="text-gray-500">No tienes tareas creadas</p>
+            <button onclick="showCreateTaskModal()" class="mt-4 text-indigo-600 hover:text-indigo-700">
+                Crear tu primera tarea
+            </button>
+        </div>
+    {% else %}
+        {% for dateKey, tasks in tasksGrouped %}
+            <div class="mb-6">
+                {# Date Header #}
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+                        {% if dateKey == 'now'|date('Y-m-d') %}
+                            Hoy - {{ dateKey|date('d/m/Y') }}
+                        {% elseif dateKey == 'now'|date_modify('-1 day')|date('Y-m-d') %}
+                            Ayer - {{ dateKey|date('d/m/Y') }}
+                        {% else %}
+                            {{ dateKey|date('d/m/Y') }}
+                        {% endif %}
+                    </h2>
+                    <span class="text-sm font-semibold text-indigo-600">
+                        Total: {{ totalHoursByDay[dateKey]|default('0h 0m') }}
+                    </span>
+                </div>
+
+                {# Tasks List #}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="divide-y divide-gray-200">
+                        {% for task in tasks %}
+                            <div class="px-6 py-4 hover:bg-gray-50 transition task-item" data-task-id="{{ task.id }}">
+                                <div class="flex items-start justify-between">
+                                    {# Left side: Status + Content #}
+                                    <div class="flex items-start flex-1">
+                                        {# Status Selector #}
+                                        <select
+                                            class="mr-4 text-xs font-medium px-3 py-1.5 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-2
+                                                {% if task.status == 'pending' %}bg-gray-100 text-gray-800 focus:ring-gray-500
+                                                {% elseif task.status == 'in_progress' %}bg-blue-100 text-blue-800 focus:ring-blue-500
+                                                {% else %}bg-green-100 text-green-800 focus:ring-green-500{% endif %}"
+                                            onchange="updateTaskStatus({{ task.id }}, this.value)"
+                                        >
+                                            <option value="pending" {% if task.status == 'pending' %}selected{% endif %}>⏳ Pendiente</option>
+                                            <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>🔄 En proceso</option>
+                                            <option value="completed" {% if task.status == 'completed' %}selected{% endif %}>✅ Finalizado</option>
+                                        </select>
+
+                                        {# Task Content #}
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-gray-900 {% if task.status == 'completed' %}line-through text-gray-500{% endif %}">
+                                                {{ task.title }}
+                                            </p>
+                                            {% if task.description %}
+                                                <p class="text-xs text-gray-500 mt-1">{{ task.description }}</p>
+                                            {% endif %}
+                                            <div class="flex items-center space-x-3 mt-2">
+                                                {% if task.startTime %}
+                                                    <p class="text-xs text-gray-400">
+                                                        <i data-lucide="clock" class="w-3 h-3 inline"></i>
+                                                        {{ task.startTime|date('H:i') }} - {{ task.endTime ? task.endTime|date('H:i') : '--:--' }}
+                                                    </p>
+                                                {% endif %}
+                                                {% if task.durationSeconds > 0 %}
+                                                    <p class="text-xs font-medium text-indigo-600">
+                                                        {{ task.formattedDuration }}
+                                                    </p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {# Right side: Actions #}
+                                    <div class="ml-4 flex items-center space-x-2">
+                                        <button
+                                            onclick="editTask({{ task.id }}, '{{ task.title|escape('js') }}', '{{ task.description|default('')|escape('js') }}', '{{ task.date|date('Y-m-d') }}', '{{ task.startTime ? task.startTime|date('H:i') : '' }}', '{{ task.endTime ? task.endTime|date('H:i') : '' }}')"
+                                            class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                                            title="Editar tarea"
+                                        >
+                                            <i data-lucide="edit" class="w-4 h-4"></i>
+                                        </button>
+
+                                        <button
+                                            onclick="deleteTask({{ task.id }})"
+                                            class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                                            title="Eliminar tarea"
+                                        >
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+{# Create/Edit Task Modal #}
+<div id="createTaskModal" class="modal hidden">
+    <div class="modal-overlay" onclick="hideCreateTaskModal()"></div>
+    <div class="modal-content max-w-2xl w-full">
+        <h3 id="modalTitle" class="text-lg font-semibold text-gray-900 mb-4">Nueva Tarea</h3>
+
+        <input type="hidden" id="taskId" value="">
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+                <input
+                    type="text"
+                    id="taskTitle"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    placeholder="Nombre de la tarea"
+                    required
+                >
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                <textarea
+                    id="taskDescription"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 resize-none"
+                    rows="3"
+                    placeholder="Detalles adicionales (opcional)"
+                ></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hora inicio</label>
+                    <input
+                        type="time"
+                        id="taskStartTime"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hora fin</label>
+                    <input
+                        type="time"
+                        id="taskEndTime"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    >
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                <input
+                    type="date"
+                    id="taskDate"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    value="{{ 'now'|date('Y-m-d') }}"
+                >
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 mt-6">
+            <button onclick="hideCreateTaskModal()" class="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                Cancelar
+            </button>
+            <button onclick="saveTask()" class="btn-primary px-4 py-2 text-sm text-white rounded-lg">
+                Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    setTimeout(() => lucide.createIcons(), 100);
+
+    function showCreateTaskModal() {
+        document.getElementById('modalTitle').textContent = 'Nueva Tarea';
+        document.getElementById('taskId').value = '';
+        document.getElementById('taskTitle').value = '';
+        document.getElementById('taskDescription').value = '';
+        document.getElementById('taskStartTime').value = '';
+        document.getElementById('taskEndTime').value = '';
+        document.getElementById('taskDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('createTaskModal').classList.remove('hidden');
+        document.getElementById('taskTitle').focus();
+    }
+
+    function hideCreateTaskModal() {
+        document.getElementById('createTaskModal').classList.add('hidden');
+    }
+
+    function editTask(id, title, description, date, startTime, endTime) {
+        document.getElementById('modalTitle').textContent = 'Editar Tarea';
+        document.getElementById('taskId').value = id;
+        document.getElementById('taskTitle').value = title;
+        document.getElementById('taskDescription').value = description || '';
+        document.getElementById('taskStartTime').value = startTime || '';
+        document.getElementById('taskEndTime').value = endTime || '';
+        document.getElementById('taskDate').value = date || new Date().toISOString().split('T')[0];
+        document.getElementById('createTaskModal').classList.remove('hidden');
+        document.getElementById('taskTitle').focus();
+    }
+
+    async function saveTask() {
+        const id = document.getElementById('taskId').value;
+        const title = document.getElementById('taskTitle').value.trim();
+        const description = document.getElementById('taskDescription').value.trim();
+        const startTime = document.getElementById('taskStartTime').value;
+        const endTime = document.getElementById('taskEndTime').value;
+        const date = document.getElementById('taskDate').value;
+
+        if (!title) {
+            showToast('El título es obligatorio', 'error');
+            return;
+        }
+
+        const url = id ? `/tasks/${id}/update` : '/tasks/create';
+        const data = {
+            title,
+            description,
+            date,
+            startTime: startTime || null,
+            endTime: endTime || null
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                hideCreateTaskModal();
+                showToast(id ? 'Tarea actualizada' : 'Tarea creada', 'success');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast(result.error || 'Error al guardar tarea', 'error');
+            }
+        } catch (error) {
+            showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    async function updateTaskStatus(taskId, status) {
+        try {
+            const response = await fetch(`/tasks/${taskId}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Response is not JSON:', text);
+                throw new Error('El servidor no devolvió JSON');
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('Estado actualizado', 'success');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast(data.error || 'Error al actualizar', 'error');
+            }
+        } catch (error) {
+            console.error('Error completo:', error);
+            showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    async function deleteTask(taskId) {
+        const confirmed = await showConfirm(
+            '¿Eliminar tarea?',
+            '¿Estás seguro de que quieres eliminar esta tarea?'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/tasks/${taskId}`, {
+                method: 'DELETE',
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('Tarea eliminada', 'success');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast(data.error || 'Error al eliminar', 'error');
+            }
+        } catch (error) {
+            showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    // Enter to save task
+    document.getElementById('taskTitle')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            saveTask();
+        }
+    });
+</script>
+{% endblock %}
