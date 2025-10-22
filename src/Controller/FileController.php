@@ -30,7 +30,7 @@ class FileController extends AbstractController
 
         try {
             $files = $this->fileManager->listFiles($path);
-            $recentHistory = $this->historyRepository->findRecent(10);
+            $recentHistory = $this->historyRepository->findRecent(5);
 
             // Get breadcrumbs
             $breadcrumbs = $this->getBreadcrumbs($path);
