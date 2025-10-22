@@ -1,0 +1,159 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ file.name }} - File Manager{% endblock %}
+
+{% block body %}
+<div class="max-w-5xl mx-auto">
+    {# File Header #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-start justify-between">
+            <div class="flex items-center flex-1">
+                <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
+                    <i data-lucide="file-text" class="w-6 h-6 text-indigo-600"></i>
+                </div>
+                <div class="flex-1">
+                    <h1 class="text-2xl font-bold text-gray-900">{{ file.name }}</h1>
+                    <p class="text-sm text-gray-500 mt-1">{{ file.path }}</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="deleteCurrentFile()"
+                        class="flex items-center px-4 py-2 text-sm text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition">
+                    <i data-lucide="trash-2" class="w-4 h-4 mr-2"></i>
+                    Eliminar
+                </button>
+                <a href="{{ path('app_files_download', {path: file.path}) }}"
+                   class="flex items-center px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                    <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                    Descargar
+                </a>
+                <button onclick="saveFile()"
+                        class="btn-primary flex items-center px-4 py-2 text-sm text-white rounded-lg">
+                    <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+                    Guardar
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Tamaño</p>
+                <p class="text-sm font-medium text-gray-900 mt-1">{{ (file.size / 1024)|number_format(2) }} KB</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Tipo</p>
+                <p class="text-sm font-medium text-gray-900 mt-1">{{ file.extension|upper }}</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Modificado</p>
+                <p class="text-sm font-medium text-gray-900 mt-1">{{ file.modified|date('d/m/Y H:i') }}</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Permisos</p>
+                <p class="text-sm font-medium text-gray-900 mt-1">{{ file.permissions }}</p>
+            </div>
+        </div>
+    </div>
+
+    {# File Content Editor #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="border-b border-gray-200 px-6 py-3 bg-gray-50">
+            <p class="text-sm font-medium text-gray-700">Contenido del archivo</p>
+        </div>
+        <div class="p-6">
+            {% if file.extension in ['jpg', 'jpeg', 'png', 'gif', 'webp'] %}
+                {# Image Preview #}
+                <div class="text-center">
+                    <img src="{{ path('app_files_download', {path: file.path}) }}"
+                         alt="{{ file.name }}"
+                         class="max-w-full h-auto rounded-lg shadow-lg mx-auto">
+                </div>
+            {% elseif file.extension in ['pdf'] %}
+                {# PDF Preview #}
+                <div class="text-center">
+                    <p class="text-gray-600 mb-4">Vista previa de PDF</p>
+                    <a href="{{ path('app_files_download', {path: file.path}) }}"
+                       class="inline-flex items-center px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
+                        <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                        Descargar PDF
+                    </a>
+                </div>
+            {% else %}
+                {# Text Editor #}
+                <textarea
+                    id="fileContent"
+                    class="w-full h-96 p-4 font-mono text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 resize-y"
+                    placeholder="Contenido del archivo..."
+                >{{ content }}</textarea>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    setTimeout(() => lucide.createIcons(), 100);
+
+    async function saveFile() {
+        const content = document.getElementById('fileContent')?.value;
+        if (!content && content !== '') return;
+
+        try {
+            const response = await fetch('{{ path('app_files_save') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    path: '{{ file.path }}',
+                    content: content
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('Archivo guardado correctamente', 'success');
+            } else {
+                showToast(data.error || 'Error al guardar', 'error');
+            }
+        } catch (error) {
+            showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    function deleteCurrentFile() {
+        showConfirmModal(
+            '¿Eliminar archivo?',
+            `¿Estás seguro de que quieres eliminar "{{ file.name }}"? Esta acción no se puede deshacer.`,
+            async () => {
+                try {
+                    const response = await fetch('{{ path('app_files_delete') }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: '{{ file.path }}' })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showToast('Archivo eliminado exitosamente', 'success');
+                        setTimeout(() => {
+                            window.location.href = '{{ path('app_files_index') }}';
+                        }, 1000);
+                    } else {
+                        showToast(data.error || 'Error al eliminar', 'error');
+                    }
+                } catch (error) {
+                    showToast('Error: ' + error.message, 'error');
+                }
+            }
+        );
+    }
+
+    // Auto-save on Ctrl+S
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            saveFile();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env.local
+.env.test
+var/cache/*
+var/log/*
+vendor/
+node_modules/
+.idea/
+.vscode/
+*.md
+!DOCKER.md
+docker-compose.yml
+Dockerfile
+.dockerignore

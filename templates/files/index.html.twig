@@ -1,0 +1,93 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Archivos - {{ currentPath|default('Home') }}{% endblock %}
+
+{% block body %}
+<div class="max-w-7xl mx-auto">
+    {# Breadcrumbs #}
+    <nav class="flex items-center space-x-2 mb-6 text-sm">
+        {% for crumb in breadcrumbs %}
+            {% if not loop.last %}
+                <a href="{{ path('app_files_index', {path: crumb.path}) }}" class="text-gray-600 hover:text-indigo-600 transition">
+                    {{ crumb.name }}
+                </a>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+            {% else %}
+                <span class="text-gray-900 font-medium">{{ crumb.name }}</span>
+            {% endif %}
+        {% endfor %}
+    </nav>
+
+    {# Files Grid #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {% if files is empty %}
+            <div class="p-12 text-center">
+                <i data-lucide="folder-open" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+                <p class="text-gray-500">Esta carpeta está vacía</p>
+            </div>
+        {% else %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-6">
+                {% for file in files %}
+                    {% include 'files/_file_item.html.twig' with {'file': file} %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    {# Recent Activity #}
+    {% if recentHistory is not empty and currentPath == '' %}
+        <div class="mt-8">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <i data-lucide="clock" class="w-5 h-5 mr-2 text-indigo-600"></i>
+                Actividad reciente
+            </h2>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="divide-y divide-gray-200">
+                    {% for item in recentHistory %}
+                        <div class="px-6 py-4 hover:bg-gray-50 transition flex items-center justify-between">
+                            <div class="flex items-center flex-1">
+                                <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
+                                    {% if item.action == 'opened' %}
+                                        <i data-lucide="folder-open" class="w-5 h-5 text-indigo-600"></i>
+                                    {% elseif item.action == 'created' %}
+                                        <i data-lucide="plus-circle" class="w-5 h-5 text-green-600"></i>
+                                    {% elseif item.action == 'deleted' %}
+                                        <i data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
+                                    {% elseif item.action == 'renamed' %}
+                                        <i data-lucide="edit" class="w-5 h-5 text-blue-600"></i>
+                                    {% else %}
+                                        <i data-lucide="file" class="w-5 h-5 text-gray-600"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">{{ item.filename }}</p>
+                                    <p class="text-xs text-gray-500">{{ item.path }}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if item.action == 'opened' %}bg-indigo-100 text-indigo-800
+                                    {% elseif item.action == 'created' %}bg-green-100 text-green-800
+                                    {% elseif item.action == 'deleted' %}bg-red-100 text-red-800
+                                    {% elseif item.action == 'renamed' %}bg-blue-100 text-blue-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ item.action|capitalize }}
+                                </span>
+                                <p class="text-xs text-gray-500 mt-1">{{ item.createdAt|date('d/m/Y H:i') }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    document.getElementById('currentPath').value = '{{ currentPath }}';
+
+    // Re-initialize Lucide icons after content load
+    setTimeout(() => lucide.createIcons(), 100);
+</script>
+{% endblock %}

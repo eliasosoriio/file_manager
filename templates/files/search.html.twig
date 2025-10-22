@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Búsqueda: {{ query }} - File Manager{% endblock %}
+
+{% block body %}
+<div class="max-w-5xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">
+        Resultados para "{{ query }}"
+    </h1>
+    <p class="text-gray-600 mb-6">
+        {{ results|length }} archivo(s) encontrado(s)
+    </p>
+
+    {# Search Results #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+        {% if results is empty %}
+            <div class="p-12 text-center">
+                <i data-lucide="search" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+                <p class="text-gray-500">No se encontraron resultados</p>
+            </div>
+        {% else %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                {% for file in results %}
+                    {% include 'files/_file_item.html.twig' with {'file': file} %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    {# History Results #}
+    {% if historyResults is not empty %}
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">
+            En el historial
+        </h2>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="divide-y divide-gray-200">
+                {% for item in historyResults %}
+                    <div class="px-6 py-4 hover:bg-gray-50 transition">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ item.filename }}</p>
+                                <p class="text-xs text-gray-500">{{ item.path }}</p>
+                            </div>
+                            <span class="text-xs text-gray-400">{{ item.createdAt|date('d/m/Y H:i') }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    setTimeout(() => lucide.createIcons(), 100);
+</script>
+{% endblock %}
