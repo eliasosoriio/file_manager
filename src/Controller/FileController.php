@@ -399,6 +399,112 @@ class FileController extends AbstractController
         }
     }
 
+    #[Route('/backup', name: 'app_files_backup', methods: ['POST'])]
+    public function backup(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $fileName = $data['fileName'] ?? 'backup.sql';
+        $path = $data['path'] ?? '';
+
+        try {
+            // Get database credentials from DATABASE_URL environment variable
+            $databaseUrl = $_ENV['DATABASE_URL'] ?? '';
+
+            if (empty($databaseUrl)) {
+                throw new \Exception('DATABASE_URL not configured in environment');
+            }
+
+            // Parse DATABASE_URL (format: mysql://user:password@host:port/dbname)
+            if (!preg_match('/mysql:\/\/([^:]+):([^@]+)@([^:\/]+)(?::(\d+))?\/([^?]+)/', $databaseUrl, $matches)) {
+                throw new \Exception('Invalid DATABASE_URL format');
+            }
+
+            $dbUser = urldecode($matches[1]);
+            $dbPassword = urldecode($matches[2]);
+            $dbHost = $matches[3];
+            $dbPort = $matches[4] ?? '3306';
+            $dbName = $matches[5];
+
+            // Check if mysqldump is available
+            $mysqldumpPath = trim(shell_exec('which mysqldump 2>/dev/null') ?? '');
+            if (empty($mysqldumpPath)) {
+                throw new \Exception('mysqldump command not found. Please install mysql-client package.');
+            }
+
+            // Build the full path for the backup file
+            $fullPath = $this->fileManager->getBasePath();
+            if (!empty($path)) {
+                $fullPath .= '/' . trim($path, '/');
+            }
+
+            // Ensure directory exists
+            if (!is_dir($fullPath)) {
+                throw new \Exception('Directory does not exist: ' . $fullPath);
+            }
+
+            if (!is_writable($fullPath)) {
+                throw new \Exception('Directory is not writable: ' . $fullPath);
+            }
+
+            $backupFilePath = rtrim($fullPath, '/') . '/' . $fileName;
+
+            // Use mysqldump with proper password handling
+            $command = sprintf(
+                'MYSQL_PWD=%s mysqldump -h %s -P %s -u %s --single-transaction --quick --lock-tables=false %s > %s 2>&1',
+                escapeshellarg($dbPassword),
+                escapeshellarg($dbHost),
+                escapeshellarg($dbPort),
+                escapeshellarg($dbUser),
+                escapeshellarg($dbName),
+                escapeshellarg($backupFilePath)
+            );
+
+            // Execute the command
+            $output = [];
+            $returnCode = 0;
+            exec($command, $output, $returnCode);
+
+            if ($returnCode !== 0) {
+                $errorMsg = !empty($output) ? implode("\n", $output) : 'Unknown error during backup';
+                throw new \Exception('mysqldump failed (code ' . $returnCode . '): ' . $errorMsg);
+            }
+
+            // Verify the file was created and has content
+            if (!file_exists($backupFilePath)) {
+                throw new \Exception('Backup file was not created at: ' . $backupFilePath);
+            }
+
+            $fileSize = filesize($backupFilePath);
+            if ($fileSize === 0) {
+                unlink($backupFilePath); // Delete empty file
+                throw new \Exception('Backup file is empty. Check database connection and mysqldump availability.');
+            }
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Backup created successfully',
+                'fileName' => $fileName,
+                'size' => $fileSize,
+                'sizeFormatted' => $this->formatFileSize($fileSize),
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function formatFileSize(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+        return round($bytes, 2) . ' ' . $units[$pow];
+    }
+
     private function getBreadcrumbs(string $path): array
     {
         if (empty($path)) {
