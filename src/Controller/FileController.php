@@ -117,6 +117,7 @@ class FileController extends AbstractController
         $name = $data['name'] ?? '';
         $type = $data['type'] ?? 'file';
         $currentPath = $data['path'] ?? '';
+        $content = $data['content'] ?? null;
 
         if (empty($name)) {
             return $this->json(['error' => 'Name is required'], 400);
@@ -125,6 +126,11 @@ class FileController extends AbstractController
         try {
             $fullPath = $currentPath ? $currentPath . '/' . $name : $name;
             $this->fileManager->create($fullPath, $type);
+
+            // If content is provided, save it to the file
+            if ($content !== null && $type === 'file') {
+                $this->fileManager->saveFileContent($fullPath, $content);
+            }
 
             return $this->json([
                 'success' => true,

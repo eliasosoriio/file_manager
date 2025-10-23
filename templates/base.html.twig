@@ -558,6 +558,7 @@
                         <button onclick="showCreateModal('file')" title="Nuevo archivo" class="flex items-center justify-center w-10 h-10 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
                             <i data-lucide="file-plus" class="w-5 h-5"></i>
                         </button>
+
                         <button onclick="showCreateModal('directory')" title="Nueva carpeta" class="btn-primary flex items-center justify-center w-10 h-10 text-white rounded-lg">
                             <i data-lucide="folder-plus" class="w-5 h-5"></i>
                         </button>
@@ -608,7 +609,7 @@
 
     {# Create Modal #}
     <div id="createModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">
                 <span id="modalTitle">Crear archivo</span>
             </h3>
@@ -625,6 +626,31 @@
                         required
                     >
                 </div>
+
+                {# Content area - only for files #}
+                <div id="createContentArea" class="mb-4 hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700">Contenido inicial (opcional)</label>
+                        <button
+                            type="button"
+                            onclick="pasteIntoCreate()"
+                            class="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center"
+                        >
+                            <i data-lucide="clipboard" class="w-3 h-3 mr-1"></i>
+                            Pegar (Ctrl+V)
+                        </button>
+                    </div>
+                    <textarea
+                        id="createContent"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 resize-none text-sm font-mono"
+                        rows="12"
+                        placeholder="Escribe o pega aquí el contenido del archivo..."
+                    ></textarea>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <span id="createCharCount">0</span> caracteres • <span id="createLineCount">0</span> líneas
+                    </p>
+                </div>
+
                 <div class="flex justify-end space-x-3">
                     <button type="button" onclick="hideCreateModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
                         Cancelar
@@ -1008,18 +1034,102 @@
             const modal = document.getElementById('createModal');
             const title = document.getElementById('modalTitle');
             const typeInput = document.getElementById('createType');
+            const contentArea = document.getElementById('createContentArea');
+            const contentTextarea = document.getElementById('createContent');
+            const nameInput = document.getElementById('createName');
 
             title.textContent = type === 'file' ? 'Crear archivo' : 'Crear carpeta';
             typeInput.value = type;
 
+            // Show content area only for files, hide for directories
+            if (type === 'file') {
+                contentArea.classList.remove('hidden');
+            } else {
+                contentArea.classList.add('hidden');
+                contentTextarea.value = '';
+            }
+
             modal.classList.remove('hidden');
-            document.getElementById('createName').focus();
+            nameInput.focus();
+            nameInput.select();
+            setTimeout(() => lucide.createIcons(), 50);
         }
 
         function hideCreateModal() {
             document.getElementById('createModal').classList.add('hidden');
             document.getElementById('createName').value = '';
+            document.getElementById('createContent').value = '';
+            document.getElementById('createCharCount').textContent = '0';
+            document.getElementById('createLineCount').textContent = '0';
         }
+
+        // Update character and line count for create modal
+        function updateCreateStats() {
+            const content = document.getElementById('createContent').value;
+            const charCount = document.getElementById('createCharCount');
+            const lineCount = document.getElementById('createLineCount');
+
+            charCount.textContent = content.length.toLocaleString();
+            lineCount.textContent = content.split('\n').length.toLocaleString();
+        }
+
+        // Paste into create modal
+        async function pasteIntoCreate() {
+            const contentTextarea = document.getElementById('createContent');
+
+            try {
+                // Try modern clipboard API first
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    try {
+                        const text = await navigator.clipboard.readText();
+                        if (text && text.trim()) {
+                            contentTextarea.value = text;
+                            updateCreateStats();
+                            showToast('Contenido pegado (' + text.length + ' caracteres)', 'success');
+                            return;
+                        } else {
+                            showToast('No hay contenido en el portapapeles', 'warning');
+                            return;
+                        }
+                    } catch (clipError) {
+                        console.log('Clipboard API failed:', clipError);
+                        // Continue to fallback method
+                    }
+                }
+
+                // Fallback: Try to trigger paste event
+                contentTextarea.focus();
+
+                // Try execCommand as fallback
+                const pasteSuccess = document.execCommand('paste');
+                if (pasteSuccess) {
+                    setTimeout(() => {
+                        updateCreateStats();
+                        if (contentTextarea.value) {
+                            showToast('Contenido pegado', 'success');
+                        }
+                    }, 100);
+                } else {
+                    // Last resort: instruct user to paste manually
+                    showToast('Usa Ctrl+V o clic derecho → Pegar', 'info');
+                }
+            } catch (error) {
+                console.error('Paste error:', error);
+                contentTextarea.focus();
+                showToast('Usa Ctrl+V o clic derecho → Pegar', 'info');
+            }
+        }
+
+        // Add event listener for create textarea
+        document.addEventListener('DOMContentLoaded', () => {
+            const createContent = document.getElementById('createContent');
+            if (createContent) {
+                createContent.addEventListener('input', updateCreateStats);
+                createContent.addEventListener('paste', () => {
+                    setTimeout(updateCreateStats, 100);
+                });
+            }
+        });
 
         // Confirmation Modal System
         let confirmCallback = null;
@@ -1069,20 +1179,32 @@
         async function handleCreate(e) {
             e.preventDefault();
 
-            const name = document.getElementById('createName').value;
+            const name = document.getElementById('createName').value.trim();
             const type = document.getElementById('createType').value;
             const path = document.getElementById('currentPath').value;
+            const content = type === 'file' ? document.getElementById('createContent').value : null;
+
+            if (!name) {
+                showToast('Debes proporcionar un nombre', 'error');
+                return;
+            }
 
             try {
+                const payload = { name, type, path };
+                if (content !== null) {
+                    payload.content = content;
+                }
+
                 const response = await fetch('{{ path('app_files_create') }}', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, type, path })
+                    body: JSON.stringify(payload)
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
+                    hideCreateModal();
                     showToast(data.message || 'Creado exitosamente', 'success');
                     setTimeout(() => location.reload(), 1000);
                 } else {
@@ -1257,7 +1379,188 @@
             return null;
         }
 
-        // Check saved theme preference
+        // Create File Dropdown Functions
+        function toggleCreateFileDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('createFileDropdown');
+            dropdown.classList.toggle('hidden');
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        function hideCreateFileDropdown() {
+            const dropdown = document.getElementById('createFileDropdown');
+            dropdown.classList.add('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (event) => {
+            const container = document.getElementById('createFileDropdownContainer');
+            const dropdown = document.getElementById('createFileDropdown');
+            if (container && !container.contains(event.target)) {
+                dropdown?.classList.add('hidden');
+            }
+        });
+
+        // Create From Clipboard Functions
+        async function showCreateFromClipboardModal() {
+            hideCreateFileDropdown();
+
+            const modal = document.getElementById('createFromClipboardModal');
+            const contentTextarea = document.getElementById('clipboardContent');
+            const charCount = document.getElementById('clipboardCharCount');
+            const lineCount = document.getElementById('clipboardLineCount');
+            const fileNameInput = document.getElementById('clipboardFileName');
+            const readonlyIndicator = document.getElementById('clipboardReadonly');
+
+            // Reset values
+            contentTextarea.value = '';
+            contentTextarea.removeAttribute('readonly');
+            contentTextarea.classList.remove('bg-gray-50');
+            readonlyIndicator.classList.add('hidden');
+
+            // Show modal first
+            modal.classList.remove('hidden');
+
+            try {
+                let clipboardText = '';
+
+                // Try to read from clipboard
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    try {
+                        clipboardText = await navigator.clipboard.readText();
+                    } catch (clipError) {
+                        console.warn('Clipboard read permission denied:', clipError);
+                        // Continue to show modal even if clipboard read fails
+                    }
+                }
+
+                if (clipboardText && clipboardText.trim() !== '') {
+                    // Auto-filled from clipboard
+                    contentTextarea.value = clipboardText;
+                    updateClipboardStats();
+
+                    // Suggest filename based on content
+                    const firstLine = clipboardText.split('\n')[0].slice(0, 30).trim();
+                    const suggestedName = firstLine.replace(/[^a-zA-Z0-9\s_-]/g, '').replace(/\s+/g, '_').slice(0, 20).trim() || 'documento';
+                    fileNameInput.value = suggestedName + '.txt';
+
+                    // Mark as auto-filled
+                    readonlyIndicator.classList.remove('hidden');
+                } else {
+                    // No clipboard content, allow manual paste
+                    fileNameInput.value = 'documento.txt';
+                }
+
+                fileNameInput.focus();
+                fileNameInput.select();
+                setTimeout(() => lucide.createIcons(), 50);
+
+            } catch (error) {
+                console.error('Error reading clipboard:', error);
+                // Don't close modal, allow manual paste
+                fileNameInput.value = 'documento.txt';
+                fileNameInput.focus();
+                setTimeout(() => lucide.createIcons(), 50);
+            }
+        }
+
+        // Function to manually paste from clipboard
+        async function pasteFromClipboard() {
+            const contentTextarea = document.getElementById('clipboardContent');
+
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    if (text) {
+                        contentTextarea.value = text;
+                        updateClipboardStats();
+                        showToast('Contenido pegado', 'success');
+                    } else {
+                        showToast('No hay contenido en el portapapeles', 'warning');
+                    }
+                } else {
+                    // Focus textarea and let user paste manually
+                    contentTextarea.focus();
+                    showToast('Usa Ctrl+V para pegar el contenido', 'info');
+                }
+            } catch (error) {
+                console.error('Error pasting:', error);
+                contentTextarea.focus();
+                showToast('Usa Ctrl+V para pegar el contenido', 'info');
+            }
+        }
+
+        // Update character and line count
+        function updateClipboardStats() {
+            const content = document.getElementById('clipboardContent').value;
+            const charCount = document.getElementById('clipboardCharCount');
+            const lineCount = document.getElementById('clipboardLineCount');
+
+            charCount.textContent = content.length.toLocaleString();
+            lineCount.textContent = content.split('\n').length.toLocaleString();
+        }
+
+        // Add event listener to textarea for live stats update
+        document.addEventListener('DOMContentLoaded', () => {
+            const clipboardContent = document.getElementById('clipboardContent');
+            if (clipboardContent) {
+                clipboardContent.addEventListener('input', updateClipboardStats);
+                clipboardContent.addEventListener('paste', () => {
+                    setTimeout(updateClipboardStats, 100);
+                });
+            }
+        });
+
+        function hideCreateFromClipboardModal() {
+            const modal = document.getElementById('createFromClipboardModal');
+            modal.classList.add('hidden');
+            document.getElementById('clipboardFileName').value = '';
+            document.getElementById('clipboardContent').value = '';
+            document.getElementById('clipboardCharCount').textContent = '0';
+            document.getElementById('clipboardLineCount').textContent = '0';
+            document.getElementById('clipboardReadonly').classList.add('hidden');
+        }
+
+        async function createFileFromClipboard() {
+            const fileName = document.getElementById('clipboardFileName').value.trim();
+            const content = document.getElementById('clipboardContent').value;
+            const path = document.getElementById('currentPath')?.value || '';
+
+            if (!fileName) {
+                showToast('Debes proporcionar un nombre para el archivo', 'error');
+                return;
+            }
+
+            if (!content || content.trim() === '') {
+                showToast('No hay contenido para crear el archivo', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('{{ path('app_files_create') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: fileName,
+                        type: 'file',
+                        path: path,
+                        content: content
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    hideCreateFromClipboardModal();
+                    showToast('Archivo creado exitosamente', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast(data.error || 'Error al crear archivo', 'error');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+        }        // Check saved theme preference
         const savedTheme = getCookie('theme');
         if (savedTheme === 'dark') {
             document.body.classList.add('dark-mode');
