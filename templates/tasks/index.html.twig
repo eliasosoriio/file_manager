@@ -9,7 +9,7 @@
         <div class="flex items-center space-x-3">
             <button onclick="showExportModal()" class="flex items-center px-4 py-2 text-sm text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition">
                 <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-                Exportar PDF
+                Exportar
             </button>
             <button onclick="showCreateTaskModal()" class="btn-primary flex items-center px-4 py-2 text-sm text-white rounded-lg">
                 <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
@@ -189,11 +189,11 @@
     </div>
 </div>
 
-{# Export PDF Modal #}
+{# Export Modal #}
 <div id="exportModal" class="modal hidden">
     <div class="modal-overlay" onclick="hideExportModal()"></div>
     <div class="modal-content max-w-md w-full">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Exportar Tareas a PDF</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Exportar Tareas</h3>
 
         <div class="space-y-4">
             <div>
@@ -220,9 +220,39 @@
             <button onclick="hideExportModal()" class="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
                 Cancelar
             </button>
+
+            {# TXT Dropdown Button #}
+            <div class="relative" id="txtDropdownContainer">
+                <button
+                    onclick="toggleTxtDropdown(event)"
+                    class="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition flex items-center"
+                >
+                    <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>
+                    TXT
+                    <i data-lucide="chevron-down" class="w-4 h-4 ml-1"></i>
+                </button>
+
+                <div id="txtDropdown" class="hidden absolute right-0 bottom-full mb-2 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+                    <button
+                        onclick="exportTxt()"
+                        class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition flex items-center rounded-t-lg"
+                    >
+                        <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                        Descargar
+                    </button>
+                    <button
+                        onclick="copyTxtToClipboard()"
+                        class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition flex items-center rounded-b-lg border-t border-gray-200"
+                    >
+                        <i data-lucide="clipboard" class="w-4 h-4 mr-2"></i>
+                        Copiar
+                    </button>
+                </div>
+            </div>
+
             <button onclick="exportPdf()" class="btn-primary px-4 py-2 text-sm text-white rounded-lg flex items-center">
                 <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-                Descargar PDF
+                PDF
             </button>
         </div>
     </div>
@@ -269,6 +299,93 @@
         hideExportModal();
         showToast('Generando PDF...', 'success');
     }
+
+    function exportTxt() {
+        const date = document.getElementById('exportDate').value;
+        if (!date) {
+            showToast('Selecciona una fecha', 'error');
+            return;
+        }
+
+        // Download TXT file
+        window.open(`/tasks/export-txt?date=${date}`, '_blank');
+        hideTxtDropdown();
+        hideExportModal();
+        showToast('Descargando TXT...', 'success');
+    }
+
+    async function copyTxtToClipboard() {
+        const date = document.getElementById('exportDate').value;
+        if (!date) {
+            showToast('Selecciona una fecha', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/tasks/get-txt-content', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Try modern clipboard API first, fallback to textarea method
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(result.content);
+                } else {
+                    // Fallback method for older browsers or non-secure contexts
+                    const textarea = document.createElement('textarea');
+                    textarea.value = result.content;
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-9999px';
+                    textarea.style.top = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    textarea.setSelectionRange(0, 99999); // For mobile devices
+
+                    try {
+                        document.execCommand('copy');
+                    } catch (err) {
+                        console.error('Fallback copy failed:', err);
+                        throw new Error('No se pudo copiar al portapapeles');
+                    } finally {
+                        document.body.removeChild(textarea);
+                    }
+                }
+
+                hideTxtDropdown();
+                hideExportModal();
+                showToast('¡Copiado al portapapeles!', 'success');
+            } else {
+                showToast(result.error || 'Error al obtener contenido', 'error');
+            }
+        } catch (error) {
+            showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    function toggleTxtDropdown(event) {
+        event.stopPropagation();
+        const dropdown = document.getElementById('txtDropdown');
+        dropdown.classList.toggle('hidden');
+        setTimeout(() => lucide.createIcons(), 50);
+    }
+
+    function hideTxtDropdown() {
+        const dropdown = document.getElementById('txtDropdown');
+        dropdown.classList.add('hidden');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (event) => {
+        const container = document.getElementById('txtDropdownContainer');
+        const dropdown = document.getElementById('txtDropdown');
+        if (container && !container.contains(event.target)) {
+            dropdown?.classList.add('hidden');
+        }
+    });
 
     function editTask(id, title, description, date, startTime, endTime) {
         document.getElementById('modalTitle').textContent = 'Editar Tarea';

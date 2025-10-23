@@ -280,4 +280,110 @@ class TaskController extends AbstractController
             return new Response('Error al generar PDF: ' . $e->getMessage(), 500);
         }
     }
+
+    #[Route('/export-txt', name: 'app_tasks_export_txt', methods: ['GET'])]
+    public function exportTxt(Request $request): Response
+    {
+        $date = $request->query->get('date', date('Y-m-d'));
+
+        try {
+            $content = $this->generateTxtContent($date);
+
+            // Output TXT
+            return new Response(
+                $content,
+                Response::HTTP_OK,
+                [
+                    'Content-Type' => 'text/plain; charset=utf-8',
+                    'Content-Disposition' => sprintf('attachment; filename="tareas_%s.txt"', $date),
+                ]
+            );
+        } catch (\Exception $e) {
+            return new Response('Error al generar TXT: ' . $e->getMessage(), 500);
+        }
+    }
+
+    #[Route('/get-txt-content', name: 'app_tasks_get_txt_content', methods: ['POST'])]
+    public function getTxtContent(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $date = $data['date'] ?? date('Y-m-d');
+
+        try {
+            $content = $this->generateTxtContent($date);
+
+            return $this->json([
+                'success' => true,
+                'content' => $content,
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    private function generateTxtContent(string $date): string
+    {
+        // Get tasks for the specified date
+        $qb = $this->taskRepository->createQueryBuilder('t')
+            ->where('t.date = :date')
+            ->setParameter('date', new \DateTime($date))
+            ->orderBy('t.createdAt', 'ASC');
+
+        $tasks = $qb->getQuery()->getResult();
+
+        // Calculate total hours
+        $totalSeconds = $this->taskRepository->getTotalHoursByDay($date);
+        $totalHours = floor($totalSeconds / 3600);
+        $totalMinutes = floor(($totalSeconds % 3600) / 60);
+
+        // Build TXT content
+        $dateObj = new \DateTime($date);
+        $content = "═══════════════════════════════════════════════════════════════════\n";
+        $content .= "                      REPORTE DE TAREAS\n";
+        $content .= "═══════════════════════════════════════════════════════════════════\n\n";
+        $content .= "Fecha: " . $dateObj->format('l, d \d\e F \d\e Y') . "\n";
+        $content .= "Generado: " . (new \DateTime())->format('d/m/Y H:i') . "\n";
+        $content .= "Expedido por: FileManager\n\n";
+        $content .= "───────────────────────────────────────────────────────────────────\n\n";
+
+        if (count($tasks) > 0) {
+            foreach ($tasks as $index => $task) {
+                $content .= ($index + 1) . ". " . strtoupper($task->getTitle()) . "\n";
+                $content .= str_repeat("─", 67) . "\n";
+
+                if ($task->getDescription()) {
+                    $content .= "   Descripción: " . $task->getDescription() . "\n";
+                }
+
+                $content .= "   Estado: ";
+                if ($task->getStatus() === 'pending') {
+                    $content .= "Pendiente";
+                } elseif ($task->getStatus() === 'in_progress') {
+                    $content .= "En progreso";
+                } else {
+                    $content .= "Completada";
+                }
+                $content .= "\n";
+
+                if ($task->getStartTime() && $task->getEndTime()) {
+                    $content .= "   Horario: " . $task->getStartTime()->format('H:i') . " - " . $task->getEndTime()->format('H:i') . "\n";
+                }
+
+                if ($task->getDurationSeconds() > 0) {
+                    $content .= "   Duración: " . $task->getFormattedDuration() . "\n";
+                }
+
+                $content .= "\n";
+            }
+
+            $content .= "═══════════════════════════════════════════════════════════════════\n";
+            $content .= "TOTAL DEL DÍA: {$totalHours}h {$totalMinutes}m\n";
+            $content .= "═══════════════════════════════════════════════════════════════════\n";
+        } else {
+            $content .= "No hay tareas registradas para esta fecha.\n\n";
+            $content .= "═══════════════════════════════════════════════════════════════════\n";
+        }
+
+        return $content;
+    }
 }
