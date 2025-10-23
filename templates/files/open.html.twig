@@ -82,6 +82,40 @@
                         </a>
                     </div>
                 </div>
+            {% elseif file.extension in ['md', 'markdown'] %}
+                {# Markdown Preview #}
+                <div class="markdown-viewer">
+                    {# Toggle between preview and edit mode #}
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex space-x-2">
+                            <button onclick="toggleMarkdownMode('preview')" id="previewBtn"
+                                    class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg transition">
+                                <i data-lucide="eye" class="w-4 h-4 inline mr-1"></i>
+                                Vista previa
+                            </button>
+                            <button onclick="toggleMarkdownMode('edit')" id="editBtn"
+                                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                                <i data-lucide="edit" class="w-4 h-4 inline mr-1"></i>
+                                Editar
+                            </button>
+                        </div>
+                        <button onclick="saveFile()"
+                                class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition">
+                            <i data-lucide="save" class="w-4 h-4 inline mr-1"></i>
+                            Guardar
+                        </button>
+                    </div>
+
+                    {# Preview container #}
+                    <div id="markdownPreview" class="prose prose-indigo max-w-none p-6 bg-gray-50 rounded-lg border border-gray-200 min-h-96"></div>
+
+                    {# Editor container #}
+                    <textarea
+                        id="fileContent"
+                        class="hidden w-full h-96 p-4 font-mono text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 resize-y"
+                        placeholder="Escribe tu Markdown aquí..."
+                    >{{ content }}</textarea>
+                </div>
             {% else %}
                 {# Text Editor #}
                 <textarea
@@ -94,8 +128,161 @@
     </div>
 </div>
 
+{# Marked.js library for Markdown rendering #}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+{# Tailwind Typography for Markdown styling #}
+<style>
+    /* Light mode styles */
+    .prose {
+        color: #374151;
+        max-width: 65ch;
+    }
+    .prose h1 { font-size: 2.25em; font-weight: 800; margin-top: 0; margin-bottom: 0.8888889em; line-height: 1.1111111; color: #111827; }
+    .prose h2 { font-size: 1.5em; font-weight: 700; margin-top: 2em; margin-bottom: 1em; line-height: 1.3333333; color: #111827; }
+    .prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 1.6em; margin-bottom: 0.6em; line-height: 1.6; color: #111827; }
+    .prose p { margin-top: 1.25em; margin-bottom: 1.25em; line-height: 1.75; }
+    .prose a { color: #6366f1; text-decoration: underline; font-weight: 500; }
+    .prose a:hover { color: #4f46e5; }
+    .prose strong { font-weight: 600; color: #111827; }
+    .prose em { font-style: italic; }
+    .prose code { color: #111827; background-color: #f3f4f6; padding: 0.2em 0.4em; border-radius: 0.25rem; font-size: 0.875em; font-weight: 600; }
+    .prose pre { background-color: #1f2937; color: #f3f4f6; overflow-x: auto; padding: 1em; border-radius: 0.5rem; margin-top: 1.7142857em; margin-bottom: 1.7142857em; }
+    .prose pre code { background-color: transparent; color: inherit; padding: 0; font-weight: 400; font-size: 0.875em; }
+    .prose ul, .prose ol { margin-top: 1.25em; margin-bottom: 1.25em; padding-left: 1.625em; }
+    .prose li { margin-top: 0.5em; margin-bottom: 0.5em; }
+    .prose blockquote { font-weight: 500; font-style: italic; color: #111827; border-left-width: 0.25rem; border-left-color: #e5e7eb; quotes: "\201C""\201D""\2018""\2019"; margin-top: 1.6em; margin-bottom: 1.6em; padding-left: 1em; }
+    .prose img { margin-top: 2em; margin-bottom: 2em; border-radius: 0.5rem; max-width: 100%; height: auto; }
+    .prose table { width: 100%; table-layout: auto; text-align: left; margin-top: 2em; margin-bottom: 2em; font-size: 0.875em; line-height: 1.7142857; }
+    .prose thead { border-bottom-width: 1px; border-bottom-color: #d1d5db; }
+    .prose th { font-weight: 600; vertical-align: bottom; padding: 0.5714286em; }
+    .prose td { vertical-align: top; padding: 0.5714286em; }
+    .prose tbody tr { border-bottom-width: 1px; border-bottom-color: #e5e7eb; }
+    .prose hr { border-color: #e5e7eb; border-top-width: 1px; margin-top: 3em; margin-bottom: 3em; }
+
+    /* Dark mode styles */
+    body.dark-mode .prose {
+        color: #e2e8f0;
+    }
+    body.dark-mode .prose h1,
+    body.dark-mode .prose h2,
+    body.dark-mode .prose h3,
+    body.dark-mode .prose h4,
+    body.dark-mode .prose h5,
+    body.dark-mode .prose h6 {
+        color: #f1f5f9;
+    }
+    body.dark-mode .prose a {
+        color: #818cf8;
+        text-decoration: none;
+    }
+    body.dark-mode .prose a:hover {
+        color: #a5b4fc;
+        text-decoration: underline;
+    }
+    body.dark-mode .prose strong {
+        color: #f1f5f9;
+    }
+    body.dark-mode .prose code {
+        color: #f1f5f9;
+        background-color: #374151;
+        border: 1px solid #4b5563;
+    }
+    body.dark-mode .prose pre {
+        background-color: #111827;
+        color: #e5e7eb;
+        border: 1px solid #374151;
+    }
+    body.dark-mode .prose pre code {
+        border: none;
+    }
+    body.dark-mode .prose blockquote {
+        color: #cbd5e0;
+        border-left-color: #4a5568;
+    }
+    body.dark-mode .prose thead {
+        border-bottom-color: #4a5568;
+    }
+    body.dark-mode .prose tbody tr {
+        border-bottom-color: #374151;
+    }
+    body.dark-mode .prose hr {
+        border-color: #4a5568;
+    }
+    body.dark-mode .prose th,
+    body.dark-mode .prose td {
+        color: #e2e8f0;
+    }
+</style>
+
 <script>
     setTimeout(() => lucide.createIcons(), 100);
+
+    // Markdown mode management
+    let currentMode = 'preview';
+
+    function toggleMarkdownMode(mode) {
+        const previewBtn = document.getElementById('previewBtn');
+        const editBtn = document.getElementById('editBtn');
+        const previewContainer = document.getElementById('markdownPreview');
+        const editorContainer = document.getElementById('fileContent');
+
+        currentMode = mode;
+
+        if (mode === 'preview') {
+            // Show preview, hide editor
+            previewContainer.classList.remove('hidden');
+            editorContainer.classList.add('hidden');
+
+            previewBtn.classList.remove('text-gray-700', 'bg-gray-100', 'hover:bg-gray-200');
+            previewBtn.classList.add('text-white', 'bg-indigo-600');
+
+            editBtn.classList.remove('text-white', 'bg-indigo-600');
+            editBtn.classList.add('text-gray-700', 'bg-gray-100', 'hover:bg-gray-200');
+
+            // Render markdown
+            renderMarkdown();
+        } else {
+            // Show editor, hide preview
+            previewContainer.classList.add('hidden');
+            editorContainer.classList.remove('hidden');
+
+            editBtn.classList.remove('text-gray-700', 'bg-gray-100', 'hover:bg-gray-200');
+            editBtn.classList.add('text-white', 'bg-indigo-600');
+
+            previewBtn.classList.remove('text-white', 'bg-indigo-600');
+            previewBtn.classList.add('text-gray-700', 'bg-gray-100', 'hover:bg-gray-200');
+        }
+
+        setTimeout(() => lucide.createIcons(), 50);
+    }
+
+    function renderMarkdown() {
+        const content = document.getElementById('fileContent').value;
+        const previewContainer = document.getElementById('markdownPreview');
+
+        if (typeof marked !== 'undefined') {
+            // Configure marked options
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                headerIds: true,
+                mangle: false
+            });
+
+            previewContainer.innerHTML = marked.parse(content);
+        } else {
+            previewContainer.innerHTML = '<p class="text-red-600">Error: Markdown library not loaded</p>';
+        }
+    }
+
+    // Initialize markdown preview if viewing a markdown file
+    document.addEventListener('DOMContentLoaded', () => {
+        const isMarkdown = '{{ file.extension }}' === 'md' || '{{ file.extension }}' === 'markdown';
+        if (isMarkdown) {
+            toggleMarkdownMode('preview');
+        }
+    });
 
     async function saveFile() {
         const content = document.getElementById('fileContent')?.value;
