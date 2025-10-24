@@ -45,6 +45,7 @@ Una aplicación web completa para gestionar archivos, tareas y generar reportes 
 - **Contenedores**: Docker + Docker Compose (PHP-FPM, Nginx, MySQL, Supervisor)
 - **Librerías JS**:
   - Marked.js (renderizado de Markdown)
+  - SheetJS (XLSX) para hojas de cálculo
   - LocalStorage API (persistencia de datos)
   - Clipboard API (copiar al portapapeles)
 - **Iconos**: Lucide Icons
@@ -316,6 +317,15 @@ Soporte para múltiples formatos:
 - **Archivos PDF**:
   - Visualización en iframe embebido
   - Opción de descarga
+
+- **Hojas de cálculo (.xlsx, .xls, .ods, .xlsm, .xlsb)**:
+  - Visualización en tabla HTML con estilos
+  - Soporte para múltiples hojas (selector)
+  - Formato automático de números, fechas y booleanos
+  - Información de filas, columnas y celdas totales
+  - Scroll horizontal y vertical para grandes tablas
+  - Soporte completo para dark mode
+  - Renderizado con SheetJS (xlsx)
 
 - **Archivos de texto** (.txt, .log, .json, etc):
   - Editor de texto plano
@@ -639,6 +649,7 @@ docker-compose exec app php bin/console doctrine:migrations:version --add --all
 
 - ✅ **Gestión completa de archivos** (crear, editar, mover, eliminar, copiar)
 - ✅ **Visualizador Markdown** con preview/edit mode
+- ✅ **Visualizador de hojas de cálculo** (Excel/LibreOffice Calc)
 - ✅ **Soporte para PDF** en iframe
 - ✅ **Editor de texto** integrado
 - ✅ **Sistema de tareas** con cronómetro y control de tiempo

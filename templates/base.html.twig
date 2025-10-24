@@ -196,6 +196,71 @@
             background-color: #1a202c;
         }
 
+        /* Custom Scrollbar Styles - Light Mode */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c7d2fe;
+            border-radius: 6px;
+            border: 2px solid #f1f1f1;
+            transition: background 0.3s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a5b4fc;
+        }
+
+        ::-webkit-scrollbar-thumb:active {
+            background: #818cf8;
+        }
+
+        ::-webkit-scrollbar-corner {
+            background: #f1f1f1;
+        }
+
+        /* Custom Scrollbar Styles - Dark Mode */
+        body.dark-mode ::-webkit-scrollbar-track {
+            background: #1a202c;
+            border-radius: 6px;
+        }
+
+        body.dark-mode ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 6px;
+            border: 2px solid #1a202c;
+        }
+
+        body.dark-mode ::-webkit-scrollbar-thumb:hover {
+            background: #667eea;
+        }
+
+        body.dark-mode ::-webkit-scrollbar-thumb:active {
+            background: #818cf8;
+        }
+
+        body.dark-mode ::-webkit-scrollbar-corner {
+            background: #1a202c;
+        }
+
+        /* Firefox Scrollbar - Light Mode */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #c7d2fe #f1f1f1;
+        }
+
+        /* Firefox Scrollbar - Dark Mode */
+        body.dark-mode * {
+            scrollbar-color: #4a5568 #1a202c;
+        }
+
         .theme-toggle {
             cursor: pointer;
             transition: all 0.2s ease;
@@ -328,6 +393,10 @@
 
         .search-result-item:hover {
             background-color: #f9fafb;
+        }
+
+        body.dark-mode .search-result-item:hover {
+            background-color: #374151;
         }
 
         /* Multiple Selection */

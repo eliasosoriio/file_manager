@@ -116,6 +116,61 @@
                         placeholder="Escribe tu Markdown aquí..."
                     >{{ content }}</textarea>
                 </div>
+            {% elseif file.extension in ['xlsx', 'xls', 'ods', 'xlsm', 'xlsb'] %}
+                {# Excel/Calc Spreadsheet Viewer #}
+                <div class="spreadsheet-viewer">
+                    <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                        <div class="flex items-center space-x-3 flex-wrap gap-2">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="table" class="w-5 h-5 text-green-600"></i>
+                                <span class="text-sm font-medium text-gray-700">Vista de Hoja de Cálculo</span>
+                            </div>
+                            <select id="sheetSelector" onchange="renderSheet(this.value)"
+                                    class="sheet-selector px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 bg-white text-gray-900">
+                                <option value="">Cargando hojas...</option>
+                            </select>
+                            <div class="flex items-center space-x-2 border-l border-gray-300 pl-3">
+                                <i data-lucide="zoom-in" class="w-4 h-4 text-gray-500"></i>
+                                <select id="zoomSelector" onchange="changeZoom(this.value)"
+                                        class="sheet-selector px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 bg-white text-gray-900">
+                                    <option value="60">60%</option>
+                                    <option value="70">70%</option>
+                                    <option value="80" selected>80%</option>
+                                    <option value="90">90%</option>
+                                    <option value="100">100%</option>
+                                    <option value="110">110%</option>
+                                    <option value="125">125%</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="toggleFullscreen()"
+                               title="Ver en pantalla completa"
+                               class="inline-flex items-center justify-center w-10 h-10 text-indigo-600 bg-white border border-indigo-300 rounded-lg hover:bg-indigo-50 transition">
+                                <i data-lucide="maximize-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="spreadsheetContainer" class="overflow-x-auto bg-white rounded-lg border border-gray-300" style="zoom: 0.8;">
+                        <div class="flex items-center justify-center py-12">
+                            <div class="text-center">
+                                <i data-lucide="loader" class="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2"></i>
+                                <p class="text-sm text-gray-500">Cargando hoja de cálculo...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="spreadsheetInfo" class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 hidden">
+                        <div class="flex items-start">
+                            <i data-lucide="info" class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                            <div class="text-sm text-blue-800">
+                                <p class="font-medium mb-1">Información de la hoja</p>
+                                <p id="sheetInfoText">Cargando...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             {% else %}
                 {# Text Editor #}
                 <textarea
@@ -130,6 +185,9 @@
 
 {# Marked.js library for Markdown rendering #}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+{# SheetJS library for Excel/Calc files #}
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
 {# Tailwind Typography for Markdown styling #}
 <style>
@@ -213,6 +271,125 @@
     body.dark-mode .prose td {
         color: #e2e8f0;
     }
+
+    /* Spreadsheet table styles */
+    .spreadsheet-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        background: white;
+    }
+    .spreadsheet-table th {
+        background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%);
+        font-weight: 600;
+        color: #374151;
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border: 1px solid #e5e7eb;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .spreadsheet-table td {
+        padding: 0.625rem 1rem;
+        border: 1px solid #e5e7eb;
+        color: #1f2937;
+        vertical-align: top;
+    }
+    .spreadsheet-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+    .spreadsheet-table td.number {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    .spreadsheet-table td.empty {
+        background-color: #fafafa;
+    }
+
+    /* Dark mode for spreadsheet */
+    body.dark-mode .spreadsheet-table {
+        background: #1f2937;
+    }
+    body.dark-mode .spreadsheet-table th {
+        background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
+        color: #f3f4f6;
+        border-color: #4b5563;
+    }
+    body.dark-mode .spreadsheet-table td {
+        border-color: #4b5563;
+        color: #e5e7eb;
+    }
+    body.dark-mode .spreadsheet-table tbody tr:hover {
+        background-color: #374151;
+    }
+    body.dark-mode .spreadsheet-table td.empty {
+        background-color: #111827;
+    }
+
+    /* Scrollbar for spreadsheet container */
+    #spreadsheetContainer {
+        max-height: 600px;
+        overflow: auto;
+    }
+
+    /* Sheet selector styles */
+    .sheet-selector {
+        cursor: pointer;
+    }
+
+    .sheet-selector option {
+        background-color: white;
+        color: #1f2937;
+        padding: 0.5rem;
+    }
+
+    .sheet-selector option:hover {
+        background-color: #f3f4f6;
+    }
+
+    /* Dark mode for sheet selector */
+    body.dark-mode .sheet-selector {
+        background-color: #374151 !important;
+        border-color: #4b5563 !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-mode .sheet-selector option {
+        background-color: #374151;
+        color: #e2e8f0;
+    }
+
+    body.dark-mode .sheet-selector option:hover {
+        background-color: #4b5563;
+    }
+
+    body.dark-mode .sheet-selector:focus {
+        border-color: #818cf8 !important;
+    }
+
+    /* Dark mode for spreadsheet viewer text */
+    body.dark-mode .spreadsheet-viewer .text-gray-700 {
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-mode .spreadsheet-viewer .border-gray-300 {
+        border-color: #4b5563 !important;
+    }
+
+    body.dark-mode #spreadsheetContainer {
+        background-color: #1f2937 !important;
+        border-color: #4b5563 !important;
+    }
+
+    body.dark-mode #spreadsheetInfo {
+        background-color: #1e3a5f !important;
+        border-color: #3b82f6 !important;
+    }
+
+    body.dark-mode #spreadsheetInfo .text-blue-800 {
+        color: #93c5fd !important;
+    }
 </style>
 
 <script>
@@ -282,6 +459,187 @@
         if (isMarkdown) {
             toggleMarkdownMode('preview');
         }
+
+        const isSpreadsheet = ['xlsx', 'xls', 'ods', 'xlsm', 'xlsb'].includes('{{ file.extension }}');
+        if (isSpreadsheet) {
+            loadSpreadsheet();
+            restoreZoomPreference();
+        }
+    });
+
+    // Spreadsheet functionality
+    let workbook = null;
+    let currentSheetIndex = 0;
+
+    async function loadSpreadsheet() {
+        try {
+            const response = await fetch('{{ path('app_files_download', {path: file.path}) }}');
+            const arrayBuffer = await response.arrayBuffer();
+
+            // Read the workbook
+            workbook = XLSX.read(arrayBuffer, {
+                type: 'array',
+                cellDates: true,
+                cellNF: true,
+                cellStyles: true
+            });
+
+            // Populate sheet selector
+            const selector = document.getElementById('sheetSelector');
+            selector.innerHTML = '';
+
+            workbook.SheetNames.forEach((sheetName, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = sheetName;
+                selector.appendChild(option);
+            });
+
+            // Render first sheet
+            if (workbook.SheetNames.length > 0) {
+                renderSheet(0);
+            }
+
+            setTimeout(() => lucide.createIcons(), 100);
+        } catch (error) {
+            document.getElementById('spreadsheetContainer').innerHTML = `
+                <div class="flex items-center justify-center py-12">
+                    <div class="text-center">
+                        <i data-lucide="alert-circle" class="w-8 h-8 text-red-600 mx-auto mb-2"></i>
+                        <p class="text-sm font-medium text-red-600">Error al cargar el archivo</p>
+                        <p class="text-xs text-gray-500 mt-1">${error.message}</p>
+                    </div>
+                </div>
+            `;
+            setTimeout(() => lucide.createIcons(), 100);
+        }
+    }
+
+    function renderSheet(sheetIndex) {
+        if (!workbook) return;
+
+        currentSheetIndex = sheetIndex;
+        const sheetName = workbook.SheetNames[sheetIndex];
+        const worksheet = workbook.Sheets[sheetName];
+
+        // Get sheet range
+        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+        const rows = range.e.r - range.s.r + 1;
+        const cols = range.e.c - range.s.c + 1;
+
+        // Build HTML table
+        let html = '<table class="spreadsheet-table">';
+
+        // Generate header row (A, B, C, ...)
+        html += '<thead><tr><th class="w-12 text-center">#</th>';
+        for (let c = range.s.c; c <= range.e.c; c++) {
+            html += `<th>${XLSX.utils.encode_col(c)}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+
+        // Generate data rows
+        for (let r = range.s.r; r <= range.e.r; r++) {
+            html += `<tr><td class="font-medium text-gray-500 text-center bg-gray-50">${r + 1}</td>`;
+
+            for (let c = range.s.c; c <= range.e.c; c++) {
+                const cellAddress = XLSX.utils.encode_cell({ r, c });
+                const cell = worksheet[cellAddress];
+
+                let cellValue = '';
+                let cellClass = '';
+
+                if (cell) {
+                    // Format cell value
+                    if (cell.t === 'n') { // Number
+                        cellClass = 'number';
+                        cellValue = cell.w || cell.v;
+                    } else if (cell.t === 'd') { // Date
+                        cellValue = cell.w || new Date(cell.v).toLocaleDateString();
+                    } else if (cell.t === 'b') { // Boolean
+                        cellValue = cell.v ? 'VERDADERO' : 'FALSO';
+                    } else if (cell.t === 'e') { // Error
+                        cellValue = `<span class="text-red-600">${cell.w || 'ERROR'}</span>`;
+                    } else { // String
+                        cellValue = cell.w || cell.v || '';
+                    }
+                } else {
+                    cellClass = 'empty';
+                }
+
+                html += `<td class="${cellClass}">${cellValue}</td>`;
+            }
+
+            html += '</tr>';
+        }
+
+        html += '</tbody></table>';
+
+        // Update container
+        document.getElementById('spreadsheetContainer').innerHTML = html;
+
+        // Show info
+        const infoDiv = document.getElementById('spreadsheetInfo');
+        const infoText = document.getElementById('sheetInfoText');
+        infoText.textContent = `Hoja: "${sheetName}" | Filas: ${rows} | Columnas: ${cols} | Total celdas: ${rows * cols}`;
+        infoDiv.classList.remove('hidden');
+
+        setTimeout(() => lucide.createIcons(), 100);
+    }
+
+    // Zoom functionality for spreadsheet
+    function changeZoom(zoomLevel) {
+        const container = document.getElementById('spreadsheetContainer');
+        if (container) {
+            container.style.zoom = zoomLevel / 100;
+            // Save zoom preference in localStorage
+            localStorage.setItem('spreadsheetZoom', zoomLevel);
+        }
+    }
+
+    // Restore zoom preference on load
+    function restoreZoomPreference() {
+        const savedZoom = localStorage.getItem('spreadsheetZoom') || '80';
+        const zoomSelector = document.getElementById('zoomSelector');
+        if (zoomSelector) {
+            zoomSelector.value = savedZoom;
+            changeZoom(savedZoom);
+        }
+    }
+
+    // Toggle fullscreen modal
+    function toggleFullscreen() {
+        const modal = document.getElementById('fullscreenModal');
+        const modalContent = document.getElementById('fullscreenSpreadsheet');
+
+        if (modal.classList.contains('hidden')) {
+            // Show modal
+            modal.classList.remove('hidden');
+
+            // Clone the spreadsheet content
+            const originalContent = document.getElementById('spreadsheetContainer').innerHTML;
+            modalContent.innerHTML = originalContent;
+
+            // Disable body scroll
+            document.body.style.overflow = 'hidden';
+        } else {
+            // Hide modal
+            modal.classList.add('hidden');
+
+            // Enable body scroll
+            document.body.style.overflow = '';
+        }
+
+        setTimeout(() => lucide.createIcons(), 100);
+    }
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('fullscreenModal');
+            if (modal && !modal.classList.contains('hidden')) {
+                toggleFullscreen();
+            }
+        }
     });
 
     async function saveFile() {
@@ -347,4 +705,29 @@
         }
     });
 </script>
+
+{# Fullscreen Modal #}
+<div id="fullscreenModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
+    <div class="relative w-full h-full max-w-[98vw] max-h-[98vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl flex flex-col">
+        {# Modal Header #}
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center space-x-3">
+                <i data-lucide="file-spreadsheet" class="w-6 h-6 text-indigo-600 dark:text-indigo-400"></i>
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ file.name }}</h2>
+            </div>
+            <button onclick="toggleFullscreen()"
+                    class="flex items-center justify-center w-10 h-10 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        {# Modal Content #}
+        <div class="flex-1 overflow-auto p-6">
+            <div id="fullscreenSpreadsheet" class="w-full h-full">
+                {# Content will be injected here #}
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

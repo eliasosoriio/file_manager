@@ -341,17 +341,43 @@ class FileController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $path = $data['path'] ?? '';
         $content = $data['content'] ?? '';
+        $isBinary = $data['isBinary'] ?? false;
 
         if (empty($path)) {
             return $this->json(['error' => 'Path is required'], 400);
         }
 
         try {
+            $originalSize = strlen($content);
+
+            // If content is binary (base64), decode it
+            if ($isBinary) {
+                $decoded = base64_decode($content, true);
+                if ($decoded === false) {
+                    throw new \Exception('Failed to decode base64 content');
+                }
+                $content = $decoded;
+            }
+
+            $decodedSize = strlen($content);
+
+            // Save the file
             $this->fileManager->saveFileContent($path, $content);
+
+            // Verify the file was written by reading it back
+            $savedContent = $this->fileManager->getFileContent($path);
+            $savedSize = strlen($savedContent);
+
+            // Compare to verify integrity
+            $isIdentical = $savedContent === $content;
 
             return $this->json([
                 'success' => true,
                 'message' => 'File saved successfully',
+                'originalSize' => $originalSize,
+                'decodedSize' => $decodedSize,
+                'savedSize' => $savedSize,
+                'isIdentical' => $isIdentical
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => $e->getMessage()], 500);
