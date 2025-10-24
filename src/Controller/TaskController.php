@@ -239,7 +239,8 @@ class TaskController extends AbstractController
             $qb = $this->taskRepository->createQueryBuilder('t')
                 ->where('t.date = :date')
                 ->setParameter('date', new \DateTime($date))
-                ->orderBy('t.createdAt', 'ASC');
+                ->orderBy('t.startTime', 'ASC')
+                ->addOrderBy('t.createdAt', 'ASC');
 
             $tasks = $qb->getQuery()->getResult();
 
@@ -327,7 +328,8 @@ class TaskController extends AbstractController
         $qb = $this->taskRepository->createQueryBuilder('t')
             ->where('t.date = :date')
             ->setParameter('date', new \DateTime($date))
-            ->orderBy('t.createdAt', 'ASC');
+            ->orderBy('t.startTime', 'ASC')
+            ->addOrderBy('t.createdAt', 'ASC');
 
         $tasks = $qb->getQuery()->getResult();
 

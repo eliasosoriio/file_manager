@@ -24,7 +24,8 @@ class TaskRepository extends ServiceEntityRepository
     {
         $qb = $this->createQueryBuilder('t')
             ->orderBy('t.date', 'DESC')
-            ->addOrderBy('t.createdAt', 'DESC');
+            ->addOrderBy('t.startTime', 'ASC')
+            ->addOrderBy('t.createdAt', 'ASC');
 
         $tasks = $qb->getQuery()->getResult();
 

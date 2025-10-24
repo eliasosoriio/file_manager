@@ -11,8 +11,8 @@
     {# Tailwind CSS CDN #}
     <script src="https://cdn.tailwindcss.com"></script>
 
-    {# Lucide Icons #}
-    <script src="https://unpkg.com/lucide@latest"></script>
+    {# Lucide Icons - Fixed working version #}
+    <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
 
     {# Inter Font #}
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -633,7 +633,7 @@
                         </button>
 
                         <button onclick="showBackupModal()" title="Backup de base de datos" class="flex items-center justify-center w-10 h-10 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                            <i data-lucide="cloud-download" class="w-5 h-5"></i>
+                            <i data-lucide="download-cloud" class="w-5 h-5"></i>
                         </button>
                     </div>
                 </div>
@@ -744,7 +744,7 @@
     <div id="backupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-2 flex items-center">
-                <i data-lucide="cloud-download" class="w-5 h-5 mr-2 text-indigo-600"></i>
+                <i data-lucide="download-cloud" class="w-5 h-5 mr-2 text-indigo-600"></i>
                 Backup de Base de Datos
             </h3>
             <p class="text-sm text-gray-500 mb-4">
@@ -838,8 +838,21 @@
     </div>
 
     <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
+        // Helper function to safely initialize Lucide icons
+        function initLucideIcons() {
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                try {
+                    lucide.createIcons();
+                } catch (error) {
+                    console.error('Error initializing Lucide icons:', error);
+                }
+            }
+        }
+
+        // Initialize Lucide icons when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initLucideIcons();
+        });
 
         let selectedFilePath = null;
         let selectedFiles = new Set();
@@ -872,7 +885,7 @@
                 toolbar.classList.remove('show');
             }
 
-            lucide.createIcons();
+            initLucideIcons();
         }
 
         function clearSelection() {
@@ -1057,7 +1070,7 @@
                             searchResults.innerHTML = resultsHTML;
                         }
 
-                        lucide.createIcons();
+                        initLucideIcons();
                     } catch (error) {
                         console.error('Error searching:', error);
                         searchResults.innerHTML = '<div class="p-4 text-center text-red-500 text-sm">Error al buscar</div>';
@@ -1122,7 +1135,7 @@
             `;
 
             container.appendChild(toast);
-            lucide.createIcons();
+            initLucideIcons();
 
             // Trigger animation
             setTimeout(() => toast.classList.add('show'), 10);
@@ -1180,7 +1193,7 @@
             modal.classList.remove('hidden');
             nameInput.focus();
             nameInput.select();
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => initLucideIcons(), 50);
         }
 
         function hideCreateModal() {
@@ -1213,7 +1226,7 @@
             modal.classList.remove('hidden');
             fileNameInput.focus();
             fileNameInput.select();
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => initLucideIcons(), 50);
         }
 
         function hideBackupModal() {
@@ -1358,7 +1371,7 @@
             document.getElementById('confirmMessage').textContent = message;
             confirmCallback = callback;
             document.getElementById('confirmModal').classList.remove('hidden');
-            lucide.createIcons();
+            initLucideIcons();
         }
 
         // Promise-based wrapper for confirmation modal
@@ -1448,7 +1461,7 @@
             document.getElementById('renameModal').classList.remove('hidden');
             document.getElementById('renameInput').focus();
             document.getElementById('renameInput').select();
-            lucide.createIcons();
+            initLucideIcons();
         }
 
         function hideRenameModal() {
@@ -1603,7 +1616,7 @@
             event.stopPropagation();
             const dropdown = document.getElementById('createFileDropdown');
             dropdown.classList.toggle('hidden');
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => initLucideIcons(), 50);
         }
 
         function hideCreateFileDropdown() {
@@ -1672,14 +1685,14 @@
 
                 fileNameInput.focus();
                 fileNameInput.select();
-                setTimeout(() => lucide.createIcons(), 50);
+                setTimeout(() => initLucideIcons(), 50);
 
             } catch (error) {
                 console.error('Error reading clipboard:', error);
                 // Don't close modal, allow manual paste
                 fileNameInput.value = 'documento.txt';
                 fileNameInput.focus();
-                setTimeout(() => lucide.createIcons(), 50);
+                setTimeout(() => initLucideIcons(), 50);
             }
         }
 
@@ -1779,31 +1792,41 @@
             } catch (error) {
                 showToast('Error: ' + error.message, 'error');
             }
-        }        // Check saved theme preference
+        }
+
+        // Check saved theme preference
         const savedTheme = getCookie('theme');
         if (savedTheme === 'dark') {
             document.body.classList.add('dark-mode');
-            lightIcon.classList.add('hidden');
-            darkIcon.classList.remove('hidden');
+            if (lightIcon && darkIcon) {
+                lightIcon.classList.add('hidden');
+                darkIcon.classList.remove('hidden');
+            }
         }
 
         // Toggle theme
-        themeToggle.addEventListener('click', function() {
-            document.body.classList.toggle('dark-mode');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', function() {
+                document.body.classList.toggle('dark-mode');
 
-            if (document.body.classList.contains('dark-mode')) {
-                lightIcon.classList.add('hidden');
-                darkIcon.classList.remove('hidden');
-                setCookie('theme', 'dark', 365);
-            } else {
-                lightIcon.classList.remove('hidden');
-                darkIcon.classList.add('hidden');
-                setCookie('theme', 'light', 365);
-            }
+                if (document.body.classList.contains('dark-mode')) {
+                    if (lightIcon && darkIcon) {
+                        lightIcon.classList.add('hidden');
+                        darkIcon.classList.remove('hidden');
+                    }
+                    setCookie('theme', 'dark', 365);
+                } else {
+                    if (lightIcon && darkIcon) {
+                        lightIcon.classList.remove('hidden');
+                        darkIcon.classList.add('hidden');
+                    }
+                    setCookie('theme', 'light', 365);
+                }
 
-            // Re-render icons for dark mode
-            lucide.createIcons();
-        });
+                // Re-render icons for dark mode
+                initLucideIcons();
+            });
+        }
     </script>
 
     {% block javascripts %}{% endblock %}

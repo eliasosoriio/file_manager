@@ -682,25 +682,25 @@
         // Build report text
         let report = `Hola,\n\n`;
 
-        report += `1.- ¿Qué he hecho hoy, y resultado (en desarrollo o finalizado)?\n`;
+        report += `1.- ¿Qué he hecho hoy, y resultado (en desarrollo o finalizado)?\n\n`;
 
         if (completedTasks.length > 0) {
             completedTasks.forEach(task => {
-                report += `    - ${task.title}\n`;
+                report += `    • ${task.title}\n\n`;
                 if (task.description) {
                     report += `      ${task.description}\n`;
                 }
-                report += `      Resultado: Finalizado\n\n`;
+                report += `      Resultado: Finalizado\n\n\n`;
             });
         }
 
         if (inProgressTasks.length > 0) {
             inProgressTasks.forEach(task => {
-                report += `    - ${task.title}\n`;
+                report += `    • ${task.title}\n\n`;
                 if (task.description) {
                     report += `      ${task.description}\n`;
                 }
-                report += `      Resultado: En desarrollo\n\n`;
+                report += `      Resultado: En desarrollo\n\n\n`;
             });
         }
 
@@ -708,7 +708,7 @@
             report += `    - \n      Resultado: \n\n`;
         }
 
-        report += `2.- ¿Qué voy a hacer a partir de este momento?\n`;
+        report += `2.- ¿Qué voy a hacer a partir de este momento?\n\n`;
         if (nextActions) {
             // Split by lines and format each line
             const lines = nextActions.split('\n').filter(line => line.trim());
