@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proyectos - File Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/files">File Manager</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="/files">Archivos</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/projects">Proyectos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/tasks-management">Tareas</a></li>
+                <li class="nav-item"><a class="nav-link" href="/time-entries">Registro Horas</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Gestión de Proyectos</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#projectModal">
+                    <i class="fas fa-plus"></i> Nuevo Proyecto
+                </button>
+            </div>
+
+            <div class="row" id="projectsList">
+                <!-- Projects will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Project Modal -->
+<div class="modal fade" id="projectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Proyecto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="projectForm">
+                    <input type="hidden" id="projectId">
+                    <div class="mb-3">
+                        <label for="projectName" class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" id="projectName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="projectDescription" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="projectDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="projectColor" class="form-label">Color</label>
+                        <input type="color" class="form-control form-control-color" id="projectColor" value="#007bff">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveProject">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .project-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .project-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const projectModal = new bootstrap.Modal(document.getElementById('projectModal'));
+
+    loadProjects();
+
+    // Save project
+    document.getElementById('saveProject').addEventListener('click', function() {
+        const id = document.getElementById('projectId').value;
+        const data = {
+            name: document.getElementById('projectName').value,
+            description: document.getElementById('projectDescription').value,
+            color: document.getElementById('projectColor').value
+        };
+
+        const url = id ? `/projects/${id}` : '/projects';
+        const method = 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                projectModal.hide();
+                loadProjects();
+                document.getElementById('projectForm').reset();
+            } else {
+                alert(result.error || 'Error al guardar el proyecto');
+            }
+        });
+    });
+
+    // Reset modal on hide
+    document.getElementById('projectModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('projectForm').reset();
+        document.getElementById('projectId').value = '';
+        document.querySelector('#projectModal .modal-title').textContent = 'Nuevo Proyecto';
+    });
+});
+
+function loadProjects() {
+    fetch('/projects')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('projectsList');
+            container.innerHTML = '';
+
+            if (data.projects && data.projects.length > 0) {
+                data.projects.forEach(project => {
+                    container.innerHTML += `
+                        <div class="col-md-4 mb-3">
+                            <div class="card project-card" style="border-left-color: ${project.color}">
+                                <div class="card-body">
+                                    <h5 class="card-title">${project.name}</h5>
+                                    <p class="card-text text-muted">${project.description || 'Sin descripción'}</p>
+                                    <small class="text-muted">
+                                        ${project.taskCount} tarea(s)
+                                    </small>
+                                    <div class="mt-3">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editProject(${project.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProject(${project.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                container.innerHTML = '<div class="col-12"><div class="alert alert-info">No hay proyectos creados aún.</div></div>';
+            }
+        });
+}
+
+function editProject(id) {
+    fetch(`/projects/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.project) {
+                document.getElementById('projectId').value = data.project.id;
+                document.getElementById('projectName').value = data.project.name;
+                document.getElementById('projectDescription').value = data.project.description || '';
+                document.getElementById('projectColor').value = data.project.color || '#007bff';
+                document.querySelector('#projectModal .modal-title').textContent = 'Editar Proyecto';
+                new bootstrap.Modal(document.getElementById('projectModal')).show();
+            }
+        });
+}
+
+function deleteProject(id) {
+    if (confirm('¿Estás seguro de eliminar este proyecto?')) {
+        fetch(`/projects/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                loadProjects();
+            } else {
+                alert(result.error || 'Error al eliminar el proyecto');
+            }
+        });
+    }
+}
+    });
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

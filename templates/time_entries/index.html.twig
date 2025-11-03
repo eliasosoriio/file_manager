@@ -1,0 +1,536 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Registro de Horas{% endblock %}
+
+{% block body %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Registro de Horas</h1>
+        <div class="flex items-center space-x-3">
+            <button onclick="showExportModal()" class="flex items-center px-4 py-2 text-sm text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition">
+                <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                Exportar
+            </button>
+            <button onclick="showCreateEntryModal()" class="btn-primary flex items-center px-4 py-2 text-sm text-white rounded-lg">
+                <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+                Nuevo Registro
+            </button>
+        </div>
+    </div>
+
+    {% if entriesGrouped is empty %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <i data-lucide="clock" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+            <p class="text-gray-500">No tienes registros de horas</p>
+            <button onclick="showCreateEntryModal()" class="mt-4 text-indigo-600 hover:text-indigo-700">
+                Crear tu primer registro
+            </button>
+        </div>
+    {% else %}
+        {% for dateKey, entries in entriesGrouped %}
+            <div class="mb-6">
+                {# Date Header #}
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+                        {% if dateKey == 'now'|date('Y-m-d') %}
+                            Hoy - {{ dateKey|date('d/m/Y') }}
+                        {% elseif dateKey == 'now'|date_modify('-1 day')|date('Y-m-d') %}
+                            Ayer - {{ dateKey|date('d/m/Y') }}
+                        {% else %}
+                            {{ dateKey|date('d/m/Y') }}
+                        {% endif %}
+                    </h2>
+                    <div class="flex items-center space-x-3">
+                        <button
+                            onclick="showWorkReportModal('{{ dateKey }}')"
+                            class="flex items-center px-3 py-1.5 text-xs text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                            title="Generar parte de trabajo"
+                        >
+                            <i data-lucide="file-text" class="w-3 h-3 mr-1.5"></i>
+                            Parte de trabajo
+                        </button>
+                        <span class="text-sm font-semibold text-indigo-600">
+                            Total: {{ totalHoursByDay[dateKey]|default('0h 0m') }}
+                        </span>
+                    </div>
+                </div>
+
+                {# Entries List #}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="divide-y divide-gray-200">
+                        {% for entry in entries %}
+                            <div class="px-6 py-4 hover:bg-gray-50 transition entry-item" data-entry-id="{{ entry.id }}">
+                                <div class="flex items-start justify-between">
+                                    {# Left side: Task + Content #}
+                                    <div class="flex items-start flex-1">
+                                        {# Task indicator #}
+                                        <div class="mr-4">
+                                            {% if entry.task %}
+                                                <span class="text-xs font-medium px-3 py-1.5 rounded-full
+                                                    {% if entry.task.status == 'pending' %}bg-gray-100 text-gray-800
+                                                    {% elseif entry.task.status == 'in_progress' %}bg-blue-100 text-blue-800
+                                                    {% else %}bg-green-100 text-green-800{% endif %}">
+                                                    {{ entry.task.name }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-xs font-medium px-3 py-1.5 rounded-full bg-gray-100 text-gray-500">
+                                                    Sin tarea
+                                                </span>
+                                            {% endif %}
+                                        </div>
+
+                                        {# Entry Content #}
+                                        <div class="flex-1 min-w-0">
+                                            {% if entry.task and entry.task.project %}
+                                                <p class="text-xs text-gray-400 mb-1">
+                                                    <i data-lucide="folder" class="w-3 h-3 inline"></i>
+                                                    {{ entry.task.project.name }}
+                                                    {% if entry.task.ticketNumber %}
+                                                        · Ticket #{{ entry.task.ticketNumber }}
+                                                    {% endif %}
+                                                </p>
+                                            {% endif %}
+                                            {% if entry.description %}
+                                                <p class="text-sm text-gray-700 mt-1">{{ entry.description }}</p>
+                                            {% endif %}
+                                            <div class="flex items-center space-x-3 mt-2">
+                                                {% if entry.startTime %}
+                                                    <p class="text-xs text-gray-400">
+                                                        <i data-lucide="clock" class="w-3 h-3 inline"></i>
+                                                        {{ entry.startTime|date('H:i') }} - {{ entry.endTime ? entry.endTime|date('H:i') : '--:--' }}
+                                                    </p>
+                                                {% endif %}
+                                                {% if entry.durationSeconds > 0 %}
+                                                    <p class="text-xs font-medium text-indigo-600">
+                                                        {{ entry.formattedDuration }}
+                                                    </p>
+                                                {% endif %}
+                                                {% if entry.startedAt %}
+                                                    <span class="text-xs font-medium px-2 py-1 bg-yellow-100 text-yellow-800 rounded">
+                                                        ⏱️ En curso
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {# Right side: Actions #}
+                                    <div class="ml-4 flex items-center space-x-2">
+                                        {% if entry.startedAt %}
+                                            <button
+                                                onclick="stopTimer({{ entry.id }})"
+                                                class="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition"
+                                                title="Detener timer"
+                                            >
+                                                <i data-lucide="square" class="w-4 h-4"></i>
+                                            </button>
+                                        {% else %}
+                                            <button
+                                                onclick="startTimer({{ entry.id }})"
+                                                class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
+                                                title="Iniciar timer"
+                                            >
+                                                <i data-lucide="play" class="w-4 h-4"></i>
+                                            </button>
+                                        {% endif %}
+
+                                        <button
+                                            onclick="editEntry({{ entry.id }}, {{ entry.task ? entry.task.id : 'null' }}, '{{ entry.description|default('')|escape('js') }}', '{{ entry.date|date('Y-m-d') }}', '{{ entry.startTime ? entry.startTime|date('H:i') : '' }}', '{{ entry.endTime ? entry.endTime|date('H:i') : '' }}')"
+                                            class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                                            title="Editar registro"
+                                        >
+                                            <i data-lucide="edit" class="w-4 h-4"></i>
+                                        </button>
+
+                                        <button
+                                            onclick="deleteEntry({{ entry.id }})"
+                                            class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                                            title="Eliminar registro"
+                                        >
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {# Active Tasks Sidebar #}
+    {% if activeTasks is not empty %}
+        <div class="mt-8 bg-blue-50 rounded-xl p-4">
+            <h3 class="text-sm font-semibold text-blue-900 mb-3">
+                <i data-lucide="list-checks" class="w-4 h-4 inline"></i>
+                Tareas Activas
+            </h3>
+            <div class="space-y-2">
+                {% for task in activeTasks %}
+                    <div class="bg-white rounded-lg p-3 flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ task.name }}</p>
+                            <p class="text-xs text-gray-500">{{ task.project.name }}</p>
+                        </div>
+                        <button
+                            onclick="createEntryForTask({{ task.id }})"
+                            class="px-3 py-1 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded transition"
+                        >
+                            Registrar tiempo
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{# Create/Edit Entry Modal #}
+<div id="createEntryModal" class="modal hidden">
+    <div class="modal-overlay" onclick="hideCreateEntryModal()"></div>
+    <div class="modal-content max-w-2xl w-full">
+        <h3 id="modalTitle" class="text-lg font-semibold text-gray-900 mb-4">Nuevo Registro de Horas</h3>
+
+        <input type="hidden" id="entryId" value="">
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tarea *</label>
+                <select
+                    id="entryTask"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    required
+                >
+                    <option value="">Selecciona una tarea...</option>
+                    {% for task in activeTasks %}
+                        <option value="{{ task.id }}">{{ task.name }} ({{ task.project.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Descripción del trabajo realizado</label>
+                <textarea
+                    id="entryDescription"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 resize-none"
+                    rows="3"
+                    placeholder="Describe el trabajo realizado..."
+                ></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hora inicio</label>
+                    <input
+                        type="time"
+                        id="entryStartTime"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hora fin</label>
+                    <input
+                        type="time"
+                        id="entryEndTime"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    >
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                <input
+                    type="date"
+                    id="entryDate"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    value="{{ 'now'|date('Y-m-d') }}"
+                >
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 mt-6">
+            <button onclick="hideCreateEntryModal()" class="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                Cancelar
+            </button>
+            <button onclick="saveEntry()" class="btn-primary px-4 py-2 text-sm text-white rounded-lg">
+                Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
+{# Export Modal #}
+<div id="exportModal" class="modal hidden">
+    <div class="modal-overlay" onclick="hideExportModal()"></div>
+    <div class="modal-content max-w-md w-full">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Exportar Registro de Horas</h3>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                <input
+                    type="date"
+                    id="exportDate"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    value="{{ 'now'|date('Y-m-d') }}"
+                >
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 mt-6">
+            <button onclick="hideExportModal()" class="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                Cancelar
+            </button>
+            <button onclick="exportPDF()" class="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition">
+                <i data-lucide="file-text" class="w-4 h-4 inline mr-1"></i>
+                Exportar PDF
+            </button>
+            <button onclick="exportTXT()" class="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition">
+                <i data-lucide="file-text" class="w-4 h-4 inline mr-1"></i>
+                Exportar TXT
+            </button>
+        </div>
+    </div>
+</div>
+
+{# Work Report Modal #}
+<div id="workReportModal" class="modal hidden">
+    <div class="modal-overlay" onclick="hideWorkReportModal()"></div>
+    <div class="modal-content max-w-3xl w-full">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Parte de Trabajo</h3>
+            <button onclick="copyWorkReport()" class="text-sm text-indigo-600 hover:text-indigo-700">
+                <i data-lucide="copy" class="w-4 h-4 inline mr-1"></i>
+                Copiar
+            </button>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+            <pre id="workReportContent" class="text-xs font-mono text-gray-800 whitespace-pre-wrap"></pre>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 mt-4">
+            <button onclick="hideWorkReportModal()" class="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Modal functions
+function showCreateEntryModal() {
+    document.getElementById('modalTitle').textContent = 'Nuevo Registro de Horas';
+    document.getElementById('entryId').value = '';
+    document.getElementById('entryTask').value = '';
+    document.getElementById('entryDescription').value = '';
+    document.getElementById('entryStartTime').value = '';
+    document.getElementById('entryEndTime').value = '';
+    document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('createEntryModal').classList.remove('hidden');
+}
+
+function hideCreateEntryModal() {
+    document.getElementById('createEntryModal').classList.add('hidden');
+}
+
+function showExportModal() {
+    document.getElementById('exportDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('exportModal').classList.remove('hidden');
+}
+
+function hideExportModal() {
+    document.getElementById('exportModal').classList.add('hidden');
+}
+
+function showWorkReportModal(date) {
+    fetch('/time-entries/get-txt-content', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ date: date })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('workReportContent').textContent = data.content;
+            document.getElementById('workReportModal').classList.remove('hidden');
+        }
+    });
+}
+
+function hideWorkReportModal() {
+    document.getElementById('workReportModal').classList.add('hidden');
+}
+
+// CRUD Functions
+function createEntryForTask(taskId) {
+    document.getElementById('entryTask').value = taskId;
+    showCreateEntryModal();
+}
+
+function saveEntry() {
+    const entryId = document.getElementById('entryId').value;
+    const taskId = document.getElementById('entryTask').value;
+    const description = document.getElementById('entryDescription').value;
+    const startTime = document.getElementById('entryStartTime').value;
+    const endTime = document.getElementById('entryEndTime').value;
+    const date = document.getElementById('entryDate').value;
+
+    if (!taskId) {
+        alert('Por favor selecciona una tarea');
+        return;
+    }
+
+    const url = entryId ? `/time-entries/${entryId}/update` : '/time-entries';
+    const data = {
+        taskId: taskId,
+        description: description,
+        startTime: startTime ? `${date} ${startTime}` : null,
+        endTime: endTime ? `${date} ${endTime}` : null,
+        date: date
+    };
+
+    fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            hideCreateEntryModal();
+            location.reload();
+        } else {
+            alert(result.error || 'Error al guardar el registro');
+        }
+    });
+}
+
+function editEntry(id, taskId, description, date, startTime, endTime) {
+    document.getElementById('modalTitle').textContent = 'Editar Registro';
+    document.getElementById('entryId').value = id;
+    document.getElementById('entryTask').value = taskId || '';
+    document.getElementById('entryDescription').value = description;
+    document.getElementById('entryStartTime').value = startTime;
+    document.getElementById('entryEndTime').value = endTime;
+    document.getElementById('entryDate').value = date;
+    document.getElementById('createEntryModal').classList.remove('hidden');
+}
+
+function deleteEntry(id) {
+    if (!confirm('¿Estás seguro de eliminar este registro?')) return;
+
+    fetch(`/time-entries/${id}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.error || 'Error al eliminar el registro');
+        }
+    });
+}
+
+function startTimer(id) {
+    fetch(`/time-entries/${id}/start`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.error || 'Error al iniciar el timer');
+        }
+    });
+}
+
+function stopTimer(id) {
+    fetch(`/time-entries/${id}/stop`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.error || 'Error al detener el timer');
+        }
+    });
+}
+
+// Export functions
+function exportPDF() {
+    const date = document.getElementById('exportDate').value;
+    window.open(`/time-entries/export-pdf?date=${date}`, '_blank');
+    hideExportModal();
+}
+
+function exportTXT() {
+    const date = document.getElementById('exportDate').value;
+    window.open(`/time-entries/export-txt?date=${date}`, '_blank');
+    hideExportModal();
+}
+
+function copyWorkReport() {
+    const content = document.getElementById('workReportContent').textContent;
+    navigator.clipboard.writeText(content).then(() => {
+        alert('Contenido copiado al portapapeles');
+    });
+}
+
+// Initialize Lucide icons
+if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+}
+</script>
+
+<style>
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    position: relative;
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.btn-primary {
+    background-color: #6366f1;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #4f46e5;
+}
+</style>
+{% endblock %}

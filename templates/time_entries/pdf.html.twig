@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Registro de Horas - {{ date|date('d/m/Y') }}</title>
+    <style>
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 12px;
+            color: #19244E;
+            margin: 20px;
+        }
+        h1 {
+            color: #19244E;
+            font-size: 24px;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #19244E;
+            padding-bottom: 10px;
+        }
+        .subtitle {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th {
+            background-color: #19244E;
+            color: #fff;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #19244E;
+        }
+        td {
+            padding: 8px 10px;
+            border: 1px solid #666;
+        }
+        tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+        .status-badge {
+            padding: 3px 8px;
+            border: 1px solid #000;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            display: inline-block;
+            background-color: #fff;
+        }
+        .total-row {
+            background-color: #e5e5e5 !important;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .total-row td {
+            border-top: 2px solid #000;
+            padding: 12px 10px;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 10px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+        .no-tasks {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-style: italic;
+        }
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 11px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Registro de Horas</h1>
+
+    <div class="header-info">
+        <div>
+            <strong>Fecha:</strong> {{ date|date('l, d \\d\\e F \\d\\e Y') }}
+        </div>
+        <div>
+            <strong>Expedido por:</strong> FileManager
+        </div>
+    </div>
+
+    {% if entries|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%">Tarea</th>
+                    <th style="width: 20%">Proyecto</th>
+                    <th style="width: 25%">Descripción</th>
+                    <th style="width: 15%">Horario</th>
+                    <th style="width: 15%">Duración</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                    <tr>
+                        <td><strong>{{ entry.task ? entry.task.name : 'Sin tarea' }}</strong></td>
+                        <td>{{ entry.task and entry.task.project ? entry.task.project.name : '-' }}</td>
+                        <td>{{ entry.description|default('-') }}</td>
+                        <td>
+                            {% if entry.startTime and entry.endTime %}
+                                {{ entry.startTime|date('H:i') }} - {{ entry.endTime|date('H:i') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ entry.formattedDuration }}</td>
+                    </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td colspan="4" style="text-align: right;">TOTAL DEL DÍA:</td>
+                    <td>{{ totalHours }}h {{ totalMinutes }}m</td>
+                </tr>
+            </tbody>
+        </table>
+    {% else %}
+        <div class="no-tasks">
+            No hay registros de horas para esta fecha.
+        </div>
+    {% endif %}
+
+    <div class="footer">
+        Generado el {{ 'now'|date('d/m/Y \\a \\l\\a\\s H:i') }} | Expedido por FileManager
+    </div>
+</body>
+</html>

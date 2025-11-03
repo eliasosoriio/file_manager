@@ -2,13 +2,15 @@
 
 namespace App\Entity;
 
-use App\Repository\TaskRepository;
+use App\Repository\ProjectRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: TaskRepository::class)]
-#[ORM\Table(name: 'tasks')]
-class Task
+#[ORM\Entity(repositoryClass: ProjectRepository::class)]
+#[ORM\Table(name: 'projects')]
+class Project
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -18,15 +20,11 @@ class Task
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[ORM\ManyToOne(targetEntity: Project::class, inversedBy: 'tasks')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?Project $project = null;
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $description = null;
 
-    #[ORM\Column(length: 50)]
-    private string $status = 'pending'; // pending, in_progress, completed
-
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $ticketNumber = null;
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $color = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
@@ -34,10 +32,14 @@ class Task
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $updatedAt = null;
 
+    #[ORM\OneToMany(targetEntity: Task::class, mappedBy: 'project')]
+    private Collection $tasks;
+
     public function __construct()
     {
         $this->createdAt = new \DateTime();
         $this->updatedAt = new \DateTime();
+        $this->tasks = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -58,40 +60,27 @@ class Task
         return $this;
     }
 
-    public function getProject(): ?Project
+    public function getDescription(): ?string
     {
-        return $this->project;
+        return $this->description;
     }
 
-    public function setProject(?Project $project): static
+    public function setDescription(?string $description): static
     {
-        $this->project = $project;
+        $this->description = $description;
         $this->updatedAt = new \DateTime();
 
         return $this;
     }
 
-    public function getStatus(): string
+    public function getColor(): ?string
     {
-        return $this->status;
+        return $this->color;
     }
 
-    public function setStatus(string $status): static
+    public function setColor(?string $color): static
     {
-        $this->status = $status;
-        $this->updatedAt = new \DateTime();
-
-        return $this;
-    }
-
-    public function getTicketNumber(): ?string
-    {
-        return $this->ticketNumber;
-    }
-
-    public function setTicketNumber(?string $ticketNumber): static
-    {
-        $this->ticketNumber = $ticketNumber;
+        $this->color = $color;
         $this->updatedAt = new \DateTime();
 
         return $this;
@@ -122,10 +111,32 @@ class Task
     }
 
     /**
-     * Check if task is not finished (pending or in_progress)
+     * @return Collection<int, Task>
      */
-    public function isActive(): bool
+    public function getTasks(): Collection
     {
-        return $this->status !== 'completed';
+        return $this->tasks;
+    }
+
+    public function addTask(Task $task): static
+    {
+        if (!$this->tasks->contains($task)) {
+            $this->tasks->add($task);
+            $task->setProject($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTask(Task $task): static
+    {
+        if ($this->tasks->removeElement($task)) {
+            // set the owning side to null (unless already changed)
+            if ($task->getProject() === $this) {
+                $task->setProject(null);
+            }
+        }
+
+        return $this;
     }
 }

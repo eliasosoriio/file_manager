@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Tareas - File Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/files">File Manager</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="/files">Archivos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/projects">Proyectos</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/tasks-management">Tareas</a></li>
+                <li class="nav-item"><a class="nav-link" href="/time-entries">Registro Horas</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Gestión de Tareas</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#taskModal">
+                    <i class="fas fa-plus"></i> Nueva Tarea
+                </button>
+            </div>
+
+            <!-- Filters -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <select class="form-select" id="filterProject" onchange="loadTasks()">
+                        <option value="">Todos los proyectos</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <select class="form-select" id="filterStatus" onchange="loadTasks()">
+                        <option value="">Todos los estados</option>
+                        <option value="pending">Pendiente</option>
+                        <option value="in_progress">En progreso</option>
+                        <option value="completed">Completada</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tasks by status -->
+            <div class="row">
+                <div class="col-md-4">
+                    <h5 class="text-warning"><i class="fas fa-clock"></i> Pendientes</h5>
+                    <div id="pendingTasks" class="tasks-column"></div>
+                </div>
+                <div class="col-md-4">
+                    <h5 class="text-info"><i class="fas fa-spinner"></i> En Progreso</h5>
+                    <div id="inProgressTasks" class="tasks-column"></div>
+                </div>
+                <div class="col-md-4">
+                    <h5 class="text-success"><i class="fas fa-check-circle"></i> Completadas</h5>
+                    <div id="completedTasks" class="tasks-column"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Modal -->
+<div class="modal fade" id="taskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nueva Tarea</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <input type="hidden" id="taskId">
+                    <div class="mb-3">
+                        <label for="taskName" class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" id="taskName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="taskProject" class="form-label">Proyecto *</label>
+                        <select class="form-select" id="taskProject" required>
+                            <option value="">Selecciona un proyecto...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="taskStatus" class="form-label">Estado *</label>
+                        <select class="form-select" id="taskStatus" required>
+                            <option value="pending">Pendiente</option>
+                            <option value="in_progress">En progreso</option>
+                            <option value="completed">Completada</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="taskTicket" class="form-label">Número de Ticket</label>
+                        <input type="text" class="form-control" id="taskTicket">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveTask">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tasks-column {
+        min-height: 400px;
+    }
+    .task-card {
+        border-left: 4px solid;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .task-card:hover {
+        transform: translateX(5px);
+    }
+    .task-card.pending {
+        border-left-color: #ffc107;
+    }
+    .task-card.in_progress {
+        border-left-color: #17a2b8;
+    }
+    .task-card.completed {
+        border-left-color: #28a745;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+
+    loadProjects();
+    loadTasks();
+
+    // Save task
+    document.getElementById('saveTask').addEventListener('click', function() {
+        const id = document.getElementById('taskId').value;
+        const data = {
+            name: document.getElementById('taskName').value,
+            projectId: document.getElementById('taskProject').value,
+            status: document.getElementById('taskStatus').value,
+            ticketNumber: document.getElementById('taskTicket').value
+        };
+
+        const url = id ? `/tasks-management/${id}` : '/tasks-management';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                taskModal.hide();
+                loadTasks();
+                document.getElementById('taskForm').reset();
+            } else {
+                alert(result.error || 'Error al guardar la tarea');
+            }
+        });
+    });
+
+    // Reset modal on hide
+    document.getElementById('taskModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('taskForm').reset();
+        document.getElementById('taskId').value = '';
+        document.querySelector('#taskModal .modal-title').textContent = 'Nueva Tarea';
+    });
+});
+
+function loadProjects() {
+    fetch('/projects')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('taskProject');
+            const filterSelect = document.getElementById('filterProject');
+
+            if (data.projects) {
+                data.projects.forEach(project => {
+                    select.innerHTML += `<option value="${project.id}">${project.name}</option>`;
+                    filterSelect.innerHTML += `<option value="${project.id}">${project.name}</option>`;
+                });
+            }
+        });
+}
+
+function loadTasks() {
+    const projectId = document.getElementById('filterProject').value;
+    const status = document.getElementById('filterStatus').value;
+
+    let url = '/tasks-management';
+    const params = [];
+    if (projectId) params.push(`projectId=${projectId}`);
+    if (status) params.push(`status=${status}`);
+    if (params.length > 0) url += '?' + params.join('&');
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('pendingTasks').innerHTML = '';
+            document.getElementById('inProgressTasks').innerHTML = '';
+            document.getElementById('completedTasks').innerHTML = '';
+
+            if (data.tasks) {
+                data.tasks.forEach(task => {
+                    const card = createTaskCard(task);
+
+                    if (task.status === 'pending') {
+                        document.getElementById('pendingTasks').appendChild(card);
+                    } else if (task.status === 'in_progress') {
+                        document.getElementById('inProgressTasks').appendChild(card);
+                    } else {
+                        document.getElementById('completedTasks').appendChild(card);
+                    }
+                });
+            }
+        });
+}
+
+function createTaskCard(task) {
+    const div = document.createElement('div');
+    div.className = `card task-card ${task.status}`;
+    div.innerHTML = `
+        <div class="card-body">
+            <h6 class="card-title">${task.name}</h6>
+            <small class="text-muted d-block">
+                <i class="fas fa-project-diagram"></i> ${task.project.name}
+            </small>
+            ${task.ticketNumber ? `<small class="text-muted d-block"><i class="fas fa-ticket-alt"></i> ${task.ticketNumber}</small>` : ''}
+            <div class="mt-2">
+                <button class="btn btn-sm btn-outline-primary" onclick="editTask(${task.id})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-success" onclick="changeStatus(${task.id}, 'completed')">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(${task.id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    return div;
+}
+
+function editTask(id) {
+    fetch(`/tasks-management/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.task) {
+                document.getElementById('taskId').value = data.task.id;
+                document.getElementById('taskName').value = data.task.name;
+                document.getElementById('taskProject').value = data.task.project.id;
+                document.getElementById('taskStatus').value = data.task.status;
+                document.getElementById('taskTicket').value = data.task.ticketNumber || '';
+                document.querySelector('#taskModal .modal-title').textContent = 'Editar Tarea';
+                new bootstrap.Modal(document.getElementById('taskModal')).show();
+            }
+        });
+}
+
+function changeStatus(id, status) {
+    fetch(`/tasks-management/${id}/status`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ status: status })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            loadTasks();
+        }
+    });
+}
+
+function deleteTask(id) {
+    if (confirm('¿Estás seguro de eliminar esta tarea?')) {
+        fetch(`/tasks-management/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                loadTasks();
+            } else {
+                alert(result.error || 'Error al eliminar la tarea');
+            }
+        });
+    }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

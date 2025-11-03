@@ -46,7 +46,7 @@ class FileController extends AbstractController
             // Get note
             $note = $this->noteRepository->getNote();
 
-            return $this->render('files/index.html.twig', [
+            $response = $this->render('files/index.html.twig', [
                 'files' => $files,
                 'currentPath' => $path,
                 'breadcrumbs' => $breadcrumbs,
@@ -54,6 +54,8 @@ class FileController extends AbstractController
                 'statistics' => $statistics,
                 'note' => $note,
             ]);
+            $response->headers->set('Content-Type', 'text/html; charset=utf-8');
+            return $response;
         } catch (\Exception $e) {
             $this->addFlash('error', $e->getMessage());
             return $this->redirectToRoute('app_files_index');
@@ -66,10 +68,12 @@ class FileController extends AbstractController
         $page = max(1, (int) $request->query->get('page', 1));
         $pagination = $this->historyRepository->findRecentPaginated($page, 20);
 
-        return $this->render('files/recent.html.twig', [
+        $response = $this->render('files/recent.html.twig', [
             'recentHistory' => $pagination['items'],
             'pagination' => $pagination,
         ]);
+        $response->headers->set('Content-Type', 'text/html; charset=utf-8');
+        return $response;
     }
 
     #[Route('/search', name: 'app_files_search', methods: ['GET'])]
@@ -103,11 +107,13 @@ class FileController extends AbstractController
             ]);
         }
 
-        return $this->render('files/search.html.twig', [
+        $response = $this->render('files/search.html.twig', [
             'query' => $query,
             'results' => $results,
             'historyResults' => $historyResults,
         ]);
+        $response->headers->set('Content-Type', 'text/html; charset=utf-8');
+        return $response;
     }
 
     #[Route('/create', name: 'app_files_create', methods: ['POST'])]
@@ -265,10 +271,12 @@ class FileController extends AbstractController
 
             $content = $this->fileManager->getFileContent($path);
 
-            return $this->render('files/open.html.twig', [
+            $response = $this->render('files/open.html.twig', [
                 'file' => $fileInfo,
                 'content' => $content,
             ]);
+            $response->headers->set('Content-Type', 'text/html; charset=utf-8');
+            return $response;
         } catch (\Exception $e) {
             $this->addFlash('error', $e->getMessage());
             return $this->redirectToRoute('app_files_index');

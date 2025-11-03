@@ -16,71 +16,79 @@ class TaskRepository extends ServiceEntityRepository
         parent::__construct($registry, Task::class);
     }
 
-    /**
-     * Get tasks grouped by day (date portion of createdAt), newest day first
-     * Returns array where key is Y-m-d and value is array of Task
-     */
-    public function findGroupedByDay(): array
+    public function save(Task $task, bool $flush = true): void
     {
-        $qb = $this->createQueryBuilder('t')
-            ->orderBy('t.date', 'DESC')
-            ->addOrderBy('t.startTime', 'ASC')
-            ->addOrderBy('t.createdAt', 'ASC');
+        $this->getEntityManager()->persist($task);
 
-        $tasks = $qb->getQuery()->getResult();
-
-        $grouped = [];
-
-        foreach ($tasks as $task) {
-            $day = $task->getDate()->format('Y-m-d');
-            if (!isset($grouped[$day])) {
-                $grouped[$day] = [];
-            }
-            $grouped[$day][] = $task;
+        if ($flush) {
+            $this->getEntityManager()->flush();
         }
-
-        return $grouped;
     }
 
-    public function save(Task $task): void
-    {
-        $em = $this->getEntityManager();
-
-        if (!$task->getId()) {
-            $em->persist($task);
-        }
-
-        $em->flush();
-    }
-
-    public function delete(Task $task): void
+    public function remove(Task $task, bool $flush = true): void
     {
         $this->getEntityManager()->remove($task);
-        $this->getEntityManager()->flush();
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
     }
 
-    public function countPending(): int
+    /**
+     * Find all active tasks (not completed)
+     */
+    public function findActiveTasks(?int $projectId = null): array
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->leftJoin('t.project', 'p')
+            ->addSelect('p')
+            ->where('t.status != :status')
+            ->setParameter('status', 'completed')
+            ->orderBy('p.name', 'ASC')
+            ->addOrderBy('t.name', 'ASC');
+
+        if ($projectId) {
+            $qb->andWhere('p.id = :projectId')
+                ->setParameter('projectId', $projectId);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Find tasks by project
+     */
+    public function findByProject(int $projectId): array
+    {
+        return $this->createQueryBuilder('t')
+            ->leftJoin('t.project', 'p')
+            ->addSelect('p')
+            ->where('p.id = :projectId')
+            ->setParameter('projectId', $projectId)
+            ->orderBy('t.status', 'ASC')
+            ->addOrderBy('t.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Count tasks by status
+     */
+    public function countByStatus(string $status): int
     {
         return $this->createQueryBuilder('t')
             ->select('COUNT(t.id)')
             ->where('t.status = :status')
-            ->setParameter('status', 'pending')
+            ->setParameter('status', $status)
             ->getQuery()
             ->getSingleScalarResult();
     }
 
     /**
-     * Get total hours per day
+     * Count pending tasks
      */
-    public function getTotalHoursByDay(string $day): int
+    public function countPending(): int
     {
-        $qb = $this->createQueryBuilder('t')
-            ->select('SUM(t.durationSeconds)')
-            ->where('t.date = :date')
-            ->setParameter('date', new \DateTime($day));
-
-        $result = $qb->getQuery()->getSingleScalarResult();
-
-        return (int) ($result ?? 0);
+        return $this->countByStatus('pending');
     }
 }

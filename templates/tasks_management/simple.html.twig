@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gestión de Tareas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .task-card { border-left: 4px solid; margin-bottom: 10px; }
+        .task-card.pending { border-left-color: #ffc107; }
+        .task-card.in_progress { border-left-color: #17a2b8; }
+        .task-card.completed { border-left-color: #28a745; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/files">File Manager</a>
+            <div>
+                <a class="btn btn-sm btn-outline-light" href="/files">Archivos</a>
+                <a class="btn btn-sm btn-outline-light" href="/projects">Proyectos</a>
+                <a class="btn btn-sm btn-light" href="/tasks-management">Tareas</a>
+                <a class="btn btn-sm btn-outline-light" href="/time-entries">Horas</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between mb-4">
+            <h1>Gestión de Tareas</h1>
+            <button class="btn btn-primary" onclick="showModal()">
+                <i class="fas fa-plus"></i> Nueva Tarea
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <select class="form-select" id="filterProject" onchange="loadTasks()">
+                    <option value="">Todos los proyectos</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <select class="form-select" id="filterStatus" onchange="loadTasks()">
+                    <option value="">Todos los estados</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="in_progress">En progreso</option>
+                    <option value="completed">Completada</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tasks by status -->
+        <div class="row">
+            <div class="col-md-4">
+                <h5 class="text-warning"><i class="fas fa-clock"></i> Pendientes</h5>
+                <div id="pendingTasks"></div>
+            </div>
+            <div class="col-md-4">
+                <h5 class="text-info"><i class="fas fa-spinner"></i> En Progreso</h5>
+                <div id="inProgressTasks"></div>
+            </div>
+            <div class="col-md-4">
+                <h5 class="text-success"><i class="fas fa-check-circle"></i> Completadas</h5>
+                <div class="col-md-4">
+                <h5 class="text-success"><i class="fas fa-check-circle"></i> Completadas</h5>
+                <div id="completedTasks"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="taskModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Tarea</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="taskId">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" id="taskName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Proyecto *</label>
+                        <select class="form-select" id="taskProject" required>
+                            <option value="">Selecciona un proyecto...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Estado *</label>
+                        <select class="form-select" id="taskStatus" required>
+                            <option value="pending">Pendiente</option>
+                            <option value="in_progress">En progreso</option>
+                            <option value="completed">Completada</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Número de Ticket</label>
+                        <input type="text" class="form-control" id="taskTicket">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveTask()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let modal;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            modal = new bootstrap.Modal(document.getElementById('taskModal'));
+            loadProjects();
+            loadTasks();
+        });
+
+        function showModal() {
+            document.getElementById('taskId').value = '';
+            document.getElementById('taskName').value = '';
+            document.getElementById('taskProject').value = '';
+            document.getElementById('taskStatus').value = 'pending';
+            document.getElementById('taskTicket').value = '';
+            document.querySelector('#taskModal .modal-title').textContent = 'Nueva Tarea';
+            modal.show();
+        }
+
+        function loadProjects() {
+            fetch('/projects?format=json')
+                .then(r => r.json())
+                .then(data => {
+                    const select = document.getElementById('taskProject');
+                    const filter = document.getElementById('filterProject');
+
+                    if (data.projects) {
+                        data.projects.forEach(p => {
+                            select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                            filter.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                        });
+                    }
+                });
+        }
+
+        function loadTasks() {
+            const projectId = document.getElementById('filterProject').value;
+            const status = document.getElementById('filterStatus').value;
+
+            let url = '/tasks-management?format=json';
+            const params = [];
+            if (projectId) params.push(`projectId=${projectId}`);
+            if (status) params.push(`status=${status}`);
+            if (params.length > 0) url += '&' + params.join('&');
+
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('pendingTasks').innerHTML = '';
+                    document.getElementById('inProgressTasks').innerHTML = '';
+                    document.getElementById('completedTasks').innerHTML = '';
+
+                    if (data.tasks) {
+                        data.tasks.forEach(task => {
+                            const card = `
+                                <div class="card task-card ${task.status} mb-2">
+                                    <div class="card-body">
+                                        <h6>${task.name}</h6>
+                                        <small class="text-muted d-block">
+                                            <i class="fas fa-folder"></i> ${task.project.name}
+                                        </small>
+                                        ${task.ticketNumber ? `<small class="text-muted d-block"><i class="fas fa-ticket-alt"></i> ${task.ticketNumber}</small>` : ''}
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editTask(${task.id})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(${task.id})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+
+                            if (task.status === 'pending') {
+                                document.getElementById('pendingTasks').innerHTML += card;
+                            } else if (task.status === 'in_progress') {
+                                document.getElementById('inProgressTasks').innerHTML += card;
+                            } else {
+                                document.getElementById('completedTasks').innerHTML += card;
+                            }
+                        });
+                    }
+                });
+        }
+
+        function saveTask() {
+            const id = document.getElementById('taskId').value;
+            const data = {
+                name: document.getElementById('taskName').value,
+                projectId: document.getElementById('taskProject').value,
+                status: document.getElementById('taskStatus').value,
+                ticketNumber: document.getElementById('taskTicket').value
+            };
+
+            const url = id ? `/tasks-management/${id}/update` : '/tasks-management/create';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    modal.hide();
+                    loadTasks();
+                } else {
+                    alert(result.error || 'Error al guardar');
+                }
+            });
+        }
+
+        function editTask(id) {
+            fetch(`/tasks-management/${id}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.task) {
+                        document.getElementById('taskId').value = data.task.id;
+                        document.getElementById('taskName').value = data.task.name;
+                        document.getElementById('taskProject').value = data.task.project.id;
+                        document.getElementById('taskStatus').value = data.task.status;
+                        document.getElementById('taskTicket').value = data.task.ticketNumber || '';
+                        document.querySelector('#taskModal .modal-title').textContent = 'Editar Tarea';
+                        modal.show();
+                    }
+                });
+        }
+
+        function deleteTask(id) {
+            if (confirm('¿Eliminar esta tarea?')) {
+                fetch(`/tasks-management/${id}/delete`, {
+                    method: 'DELETE'
+                })
+                .then(r => r.json())
+                .then(result => {
+                    if (result.success) {
+                        loadTasks();
+                    } else {
+                        alert(result.error || 'Error');
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
