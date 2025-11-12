@@ -10,6 +10,16 @@
 
     {# Tailwind CSS CDN #}
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            safelist: [
+                'bg-yellow-100', 'bg-yellow-500', 'text-yellow-600', 'text-yellow-800', 'border-yellow-500',
+                'bg-blue-100', 'bg-blue-500', 'text-blue-600', 'text-blue-800', 'border-blue-500',
+                'bg-green-100', 'bg-green-500', 'text-green-600', 'text-green-800', 'border-green-500',
+                'bg-gray-100', 'text-gray-800', 'border-l-4'
+            ]
+        }
+    </script>
 
     {# Bootstrap CSS (para nuevas páginas) #}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -122,6 +132,19 @@
             color: #718096 !important;
         }
 
+        /* Dark Mode - Inputs de tipo date, time, datetime */
+        body.dark-mode input[type="date"],
+        body.dark-mode input[type="time"],
+        body.dark-mode input[type="datetime-local"] {
+            color-scheme: dark;
+        }
+
+        body.dark-mode input[type="date"]::-webkit-calendar-picker-indicator,
+        body.dark-mode input[type="time"]::-webkit-calendar-picker-indicator,
+        body.dark-mode input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
         body.dark-mode .selection-toolbar {
             background-color: #2d3748;
         }
@@ -160,6 +183,32 @@
             border-color: #667eea !important;
         }
 
+        /* Dark Mode - Selectores */
+        body.dark-mode select {
+            background-color: #1a202c !important;
+            border-color: #4a5568 !important;
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-mode select:focus {
+            border-color: #667eea !important;
+        }
+
+        body.dark-mode select option {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+
+        /* Dark Mode - Selectores de estado de tareas */
+        body.dark-mode .task-item select {
+            background-color: #374151 !important;
+        }
+
+        body.dark-mode .task-item select option {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+
         /* Dark Mode - Modales */
         body.dark-mode .modal-overlay {
             background-color: rgba(0, 0, 0, 0.7);
@@ -182,7 +231,8 @@
         }
 
         body.dark-mode .modal-content input,
-        body.dark-mode .modal-content textarea {
+        body.dark-mode .modal-content textarea,
+        body.dark-mode .modal-content select {
             background-color: #1a202c;
             color: #e2e8f0;
             border-color: #4a5568;
@@ -194,8 +244,58 @@
         }
 
         body.dark-mode .modal-content input:focus,
-        body.dark-mode .modal-content textarea:focus {
+        body.dark-mode .modal-content textarea:focus,
+        body.dark-mode .modal-content select:focus {
             border-color: #667eea;
+        }
+
+        body.dark-mode .modal-content select option {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+
+        /* Dark Mode - Botones en modales */
+        body.dark-mode .modal-content button.bg-gray-100,
+        body.dark-mode .modal-content button.bg-white {
+            background-color: #374151;
+            color: #e2e8f0;
+            border-color: #4a5568;
+        }
+
+        body.dark-mode .modal-content button.bg-gray-100:hover,
+        body.dark-mode .modal-content button.bg-white:hover {
+            background-color: #4a5568;
+        }
+
+        body.dark-mode .modal-content button.text-gray-700 {
+            color: #e2e8f0;
+        }
+
+        /* Dark Mode - Dropdowns en modales */
+        body.dark-mode #txtDropdown,
+        body.dark-mode #pdfDropdown {
+            background-color: #2d3748;
+            border-color: #4a5568;
+        }
+
+        body.dark-mode #txtDropdown button,
+        body.dark-mode #pdfDropdown button {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode #txtDropdown button:hover,
+        body.dark-mode #pdfDropdown button:hover {
+            background-color: #374151;
+        }
+
+        /* Dark Mode - Elementos informativos en modales */
+        body.dark-mode .modal-content .bg-indigo-50 {
+            background-color: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        body.dark-mode .modal-content .text-indigo-800 {
+            color: #c7d2fe;
         }
 
         /* Dark Mode - PDF Viewer */

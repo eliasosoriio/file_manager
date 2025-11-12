@@ -43,6 +43,9 @@ class TimeEntry
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $updatedAt = null;
 
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $isRegac = false;
+
     public function __construct()
     {
         $this->createdAt = new \DateTime();
@@ -239,6 +242,19 @@ class TimeEntry
             $this->startedAt = null;
             $this->updatedAt = $now;
         }
+
+        return $this;
+    }
+
+    public function isRegac(): bool
+    {
+        return $this->isRegac;
+    }
+
+    public function setIsRegac(bool $isRegac): static
+    {
+        $this->isRegac = $isRegac;
+        $this->updatedAt = new \DateTime();
 
         return $this;
     }

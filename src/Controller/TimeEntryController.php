@@ -26,11 +26,65 @@ class TimeEntryController extends AbstractController
     #[Route('', name: 'app_time_entries_index', methods: ['GET'])]
     public function index(): Response
     {
-        // Render HTML directly
-        $html = file_get_contents(__DIR__ . '/../../templates/time_entries/simple.html.twig');
-        $response = new Response($html);
-        $response->headers->set('Content-Type', 'text/html; charset=utf-8');
-        return $response;
+        // Render the Twig template
+        return $this->render('time_entries/simple.html.twig');
+    }
+
+    #[Route('/list', name: 'app_time_entries_list', methods: ['GET'])]
+    public function list(Request $request): JsonResponse
+    {
+        try {
+            $date = $request->query->get('date');
+            
+            $qb = $this->timeEntryRepository->createQueryBuilder('e')
+                ->leftJoin('e.task', 't')
+                ->leftJoin('t.project', 'p')
+                ->addSelect('t', 'p')
+                ->orderBy('e.date', 'DESC')
+                ->addOrderBy('e.startTime', 'ASC')
+                ->addOrderBy('e.createdAt', 'ASC');
+            
+            if ($date) {
+                $qb->where('e.date = :date')
+                   ->setParameter('date', new \DateTime($date));
+            }
+            
+            $entries = $qb->getQuery()->getResult();
+            
+            $result = [];
+            foreach ($entries as $entry) {
+                $task = $entry->getTask();
+                $project = $task ? $task->getProject() : null;
+                
+                $result[] = [
+                    'id' => $entry->getId(),
+                    'description' => $entry->getDescription(),
+                    'date' => $entry->getDate()->format('Y-m-d'),
+                    'startTime' => $entry->getStartTime() ? $entry->getStartTime()->format('H:i') : null,
+                    'endTime' => $entry->getEndTime() ? $entry->getEndTime()->format('H:i') : null,
+                    'durationSeconds' => $entry->getDurationSeconds(),
+                    'formattedDuration' => $entry->getFormattedDuration(),
+                    'isRegac' => $entry->isRegac(),
+                    'task' => $task ? [
+                        'id' => $task->getId(),
+                        'name' => $task->getName(),
+                        'status' => $task->getStatus(),
+                        'ticketNumber' => $task->getTicketNumber(),
+                    ] : null,
+                    'project' => $project ? [
+                        'id' => $project->getId(),
+                        'name' => $project->getName(),
+                    ] : null,
+                ];
+            }
+            
+            return $this->json([
+                'success' => true,
+                'entries' => $result,
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     #[Route('/create', name: 'app_time_entries_create', methods: ['POST'])]
@@ -65,6 +119,10 @@ class TimeEntryController extends AbstractController
 
             if (!empty($data['endTime'])) {
                 $entry->setEndTime(new \DateTime($data['endTime']));
+            }
+
+            if (isset($data['isRegac'])) {
+                $entry->setIsRegac((bool) $data['isRegac']);
             }
 
             $this->timeEntryRepository->save($entry);
@@ -129,11 +187,11 @@ class TimeEntryController extends AbstractController
                 return $this->json(['error' => 'Registro no encontrado'], 404);
             }
 
-            $this->timeEntryRepository->delete($entry);
+            $this->timeEntryRepository->remove($entry);
 
             return $this->json([
                 'success' => true,
-                'message' => 'Registro eliminado',
+                'message' => 'Registro eliminado correctamente',
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => $e->getMessage()], 500);
@@ -152,6 +210,18 @@ class TimeEntryController extends AbstractController
 
             $data = json_decode($request->getContent(), true);
 
+            // Actualizar tarea si se proporciona
+            if (isset($data['taskId'])) {
+                $task = $this->taskRepository->find($data['taskId']);
+                if (!$task) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Tarea no encontrada',
+                    ], 400);
+                }
+                $entry->setTask($task);
+            }
+
             if (isset($data['description'])) {
                 $entry->setDescription(trim($data['description']));
             }
@@ -168,16 +238,15 @@ class TimeEntryController extends AbstractController
                 $entry->setEndTime(!empty($data['endTime']) ? new \DateTime($data['endTime']) : null);
             }
 
-            // Recalcular duración si hay startTime y endTime
-            if ($entry->getStartTime() && $entry->getEndTime()) {
-                $entry->calculateDuration();
+            if (isset($data['isRegac'])) {
+                $entry->setIsRegac((bool) $data['isRegac']);
             }
 
             $this->timeEntryRepository->save($entry);
 
             return $this->json([
                 'success' => true,
-                'message' => 'Registro actualizado',
+                'message' => 'Registro actualizado correctamente',
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => $e->getMessage()], 500);

@@ -37,11 +37,8 @@ class ProjectController extends AbstractController
             return $this->json(['projects' => $data], 200, ['Content-Type' => 'application/json; charset=utf-8']);
         }
 
-        // Otherwise render HTML directly
-        $html = file_get_contents(__DIR__ . '/../../templates/projects/simple.html.twig');
-        $response = new Response($html);
-        $response->headers->set('Content-Type', 'text/html; charset=utf-8');
-        return $response;
+        // Otherwise render the Twig template
+        return $this->render('projects/simple.html.twig');
     }
 
     #[Route('/{id}', name: 'app_projects_show', methods: ['GET'])]

@@ -68,11 +68,13 @@
                                             class="mr-4 text-xs font-medium px-3 py-1.5 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-2
                                                 {% if task.status == 'pending' %}bg-gray-100 text-gray-800 focus:ring-gray-500
                                                 {% elseif task.status == 'in_progress' %}bg-blue-100 text-blue-800 focus:ring-blue-500
+                                                {% elseif task.status == 'recurring' %}bg-purple-100 text-purple-800 focus:ring-purple-500
                                                 {% else %}bg-green-100 text-green-800 focus:ring-green-500{% endif %}"
                                             onchange="updateTaskStatus({{ task.id }}, this.value)"
                                         >
                                             <option value="pending" {% if task.status == 'pending' %}selected{% endif %}>⏳ Pendiente</option>
                                             <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>🔄 En proceso</option>
+                                            <option value="recurring" {% if task.status == 'recurring' %}selected{% endif %}>🔁 Recurrente</option>
                                             <option value="completed" {% if task.status == 'completed' %}selected{% endif %}>✅ Finalizado</option>
                                         </select>
 

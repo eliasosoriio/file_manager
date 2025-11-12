@@ -25,7 +25,19 @@ class TaskManagementController extends AbstractController
     {
         // If requesting JSON
         if ($request->query->get('format') === 'json' || $request->isXmlHttpRequest()) {
-            $tasks = $this->taskRepository->findBy([], ['status' => 'ASC', 'name' => 'ASC']);
+            $qb = $this->taskRepository->createQueryBuilder('t');
+            
+            // Si viene del registro de tiempo (excludeCompleted=true), excluir completadas
+            if ($request->query->get('excludeCompleted') === 'true') {
+                $qb->where('t.status IN (:statuses)')
+                   ->setParameter('statuses', ['pending', 'in_progress', 'recurring']);
+            }
+            
+            $qb->orderBy('t.status', 'ASC')
+               ->addOrderBy('t.name', 'ASC');
+            
+            $tasks = $qb->getQuery()->getResult();
+            
             $data = [];
             foreach ($tasks as $task) {
                 $data[] = [
@@ -33,6 +45,7 @@ class TaskManagementController extends AbstractController
                     'name' => $task->getName(),
                     'status' => $task->getStatus(),
                     'ticketNumber' => $task->getTicketNumber(),
+                    'isRegac' => $task->isRegac(),
                     'project' => [
                         'id' => $task->getProject()->getId(),
                         'name' => $task->getProject()->getName(),
@@ -43,11 +56,8 @@ class TaskManagementController extends AbstractController
             return $this->json(['tasks' => $data], 200, ['Content-Type' => 'application/json; charset=utf-8']);
         }
 
-        // Otherwise render HTML directly
-        $html = file_get_contents(__DIR__ . '/../../templates/tasks_management/simple.html.twig');
-        $response = new Response($html);
-        $response->headers->set('Content-Type', 'text/html; charset=utf-8');
-        return $response;
+        // Otherwise render the Twig template
+        return $this->render('tasks_management/simple.html.twig');
     }
 
     #[Route('/{id}', name: 'app_tasks_management_show', methods: ['GET'])]
@@ -68,6 +78,7 @@ class TaskManagementController extends AbstractController
                 'name' => $task->getName(),
                 'status' => $task->getStatus(),
                 'ticketNumber' => $task->getTicketNumber(),
+                'isRegac' => $task->isRegac(),
                 'project' => [
                     'id' => $task->getProject()->getId(),
                     'name' => $task->getProject()->getName(),
@@ -99,6 +110,10 @@ class TaskManagementController extends AbstractController
 
             if (!empty($data['ticketNumber'])) {
                 $task->setTicketNumber($data['ticketNumber']);
+            }
+
+            if (isset($data['isRegac'])) {
+                $task->setIsRegac((bool) $data['isRegac']);
             }
 
             $this->taskRepository->save($task);
@@ -189,6 +204,10 @@ class TaskManagementController extends AbstractController
                 $task->setTicketNumber($data['ticketNumber']);
             }
 
+            if (isset($data['isRegac'])) {
+                $task->setIsRegac((bool) $data['isRegac']);
+            }
+
             $this->taskRepository->save($task);
 
             return $this->json([
@@ -243,6 +262,7 @@ class TaskManagementController extends AbstractController
                     'name' => $task->getName(),
                     'status' => $task->getStatus(),
                     'ticketNumber' => $task->getTicketNumber(),
+                    'isRegac' => $task->isRegac(),
                 ];
             }, $tasks),
         ]);
