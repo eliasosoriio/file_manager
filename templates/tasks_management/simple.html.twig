@@ -109,19 +109,19 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Número de Ticket</label>
                 <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" id="taskTicket">
             </div>
-            <div class="mb-4 flex items-center">
-                <input type="checkbox" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" id="taskRegac">
-                <label class="ml-2 text-sm text-gray-700" for="taskRegac">
-                    Registrada en REGAC
-                </label>
-            </div>
-            <div class="flex justify-end space-x-3">
-                <button type="button" onclick="hideModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
-                    Cancelar
+            <div class="flex justify-between items-center">
+                <button type="button" id="deleteTaskBtn" onclick="deleteTaskFromModal()" class="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition hidden">
+                    <i data-lucide="trash-2" class="w-4 h-4 inline mr-1"></i>
+                    Eliminar
                 </button>
-                <button type="submit" class="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
-                    Guardar
-                </button>
+                <div class="flex space-x-3 ml-auto">
+                    <button type="button" onclick="hideModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
+                        Guardar
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -143,8 +143,8 @@
             document.getElementById('taskProject').value = '';
             document.getElementById('taskStatus').value = 'pending';
             document.getElementById('taskTicket').value = '';
-            document.getElementById('taskRegac').checked = true;
             document.getElementById('modalTitle').textContent = 'Nueva Tarea';
+            document.getElementById('deleteTaskBtn').classList.add('hidden');
             document.getElementById('taskModal').classList.remove('hidden');
             setTimeout(() => lucide.createIcons(), 50);
         }
@@ -211,36 +211,15 @@
                         data.tasks.forEach(task => {
                             const color = getStatusColor(task.status);
                             const icon = getStatusIcon(task.status);
-                            const regacBadge = task.isRegac 
-                                ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"><i data-lucide="check" class="w-3 h-3 mr-1"></i>REGAC</span>'
-                                : '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">Sin REGAC</span>';
                             
-                            const card = `
-                                <div class="bg-white rounded-lg shadow-sm border-l-4 border-${color}-500 p-4 hover:shadow-md transition">
-                                    <div class="flex items-start justify-between mb-3">
-                                        <div class="flex-1">
-                                            <h4 class="text-sm font-semibold text-gray-900 mb-1">${task.name}</h4>
-                                            <p class="text-xs text-gray-600 flex items-center mb-1">
-                                                <i data-lucide="folder" class="w-3 h-3 mr-1"></i>
-                                                ${task.project.name}
-                                            </p>
-                                            ${task.ticketNumber ? `<p class="text-xs text-gray-600 flex items-center mb-1"><i data-lucide="hash" class="w-3 h-3 mr-1"></i>${task.ticketNumber}</p>` : ''}
-                                            <div class="mt-2">${regacBadge}</div>
-                                        </div>
-                                        <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-${color}-100">
-                                            <i data-lucide="${icon}" class="w-4 h-4 text-${color}-600"></i>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center justify-end space-x-2 pt-3 border-t border-gray-100">
-                                        <button onclick="editTask(${task.id})" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition" title="Editar">
-                                            <i data-lucide="edit" class="w-4 h-4"></i>
-                                        </button>
-                                        <button onclick="deleteTask(${task.id})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" title="Eliminar">
-                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            `;
+                            const card = '<div onclick="editTask(' + task.id + ')" class="bg-white rounded-lg shadow-sm border-l-4 border-' + color + '-500 p-3 hover:shadow-md transition cursor-pointer">' +
+                                '<div class="flex items-center justify-between">' +
+                                    '<h4 class="text-sm font-semibold text-gray-900 truncate flex-1 mr-2">' + task.name + '</h4>' +
+                                    '<div class="flex items-center justify-center w-6 h-6 rounded-lg bg-' + color + '-100 flex-shrink-0">' +
+                                        '<i data-lucide="' + icon + '" class="w-3 h-3 text-' + color + '-600"></i>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>';
 
                             if (task.status === 'pending') {
                                 document.getElementById('pendingTasks').innerHTML += card;
@@ -277,8 +256,7 @@
                 name: document.getElementById('taskName').value,
                 projectId: document.getElementById('taskProject').value,
                 status: document.getElementById('taskStatus').value,
-                ticketNumber: document.getElementById('taskTicket').value,
-                isRegac: document.getElementById('taskRegac').checked
+                ticketNumber: document.getElementById('taskTicket').value
             };
 
             const url = id ? `/tasks-management/${id}/update` : '/tasks-management/create';
@@ -310,12 +288,19 @@
                         document.getElementById('taskProject').value = data.task.project.id;
                         document.getElementById('taskStatus').value = data.task.status;
                         document.getElementById('taskTicket').value = data.task.ticketNumber || '';
-                        document.getElementById('taskRegac').checked = data.task.isRegac || false;
                         document.getElementById('modalTitle').textContent = 'Editar Tarea';
+                        document.getElementById('deleteTaskBtn').classList.remove('hidden');
                         document.getElementById('taskModal').classList.remove('hidden');
                         setTimeout(() => lucide.createIcons(), 50);
                     }
                 });
+        }
+
+        function deleteTaskFromModal() {
+            const id = document.getElementById('taskId').value;
+            if (id) {
+                deleteTask(parseInt(id));
+            }
         }
 
         function deleteTask(id) {

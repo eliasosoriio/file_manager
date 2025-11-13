@@ -45,7 +45,6 @@ class TaskManagementController extends AbstractController
                     'name' => $task->getName(),
                     'status' => $task->getStatus(),
                     'ticketNumber' => $task->getTicketNumber(),
-                    'isRegac' => $task->isRegac(),
                     'project' => [
                         'id' => $task->getProject()->getId(),
                         'name' => $task->getProject()->getName(),
@@ -78,7 +77,6 @@ class TaskManagementController extends AbstractController
                 'name' => $task->getName(),
                 'status' => $task->getStatus(),
                 'ticketNumber' => $task->getTicketNumber(),
-                'isRegac' => $task->isRegac(),
                 'project' => [
                     'id' => $task->getProject()->getId(),
                     'name' => $task->getProject()->getName(),
@@ -110,10 +108,6 @@ class TaskManagementController extends AbstractController
 
             if (!empty($data['ticketNumber'])) {
                 $task->setTicketNumber($data['ticketNumber']);
-            }
-
-            if (isset($data['isRegac'])) {
-                $task->setIsRegac((bool) $data['isRegac']);
             }
 
             $this->taskRepository->save($task);
@@ -204,10 +198,6 @@ class TaskManagementController extends AbstractController
                 $task->setTicketNumber($data['ticketNumber']);
             }
 
-            if (isset($data['isRegac'])) {
-                $task->setIsRegac((bool) $data['isRegac']);
-            }
-
             $this->taskRepository->save($task);
 
             return $this->json([
@@ -262,7 +252,6 @@ class TaskManagementController extends AbstractController
                     'name' => $task->getName(),
                     'status' => $task->getStatus(),
                     'ticketNumber' => $task->getTicketNumber(),
-                    'isRegac' => $task->isRegac(),
                 ];
             }, $tasks),
         ]);

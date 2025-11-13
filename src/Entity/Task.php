@@ -28,9 +28,6 @@ class Task
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $ticketNumber = null;
 
-    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
-    private bool $isRegac = false;
-
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
 
@@ -95,19 +92,6 @@ class Task
     public function setTicketNumber(?string $ticketNumber): static
     {
         $this->ticketNumber = $ticketNumber;
-        $this->updatedAt = new \DateTime();
-
-        return $this;
-    }
-
-    public function isRegac(): bool
-    {
-        return $this->isRegac;
-    }
-
-    public function setIsRegac(bool $isRegac): static
-    {
-        $this->isRegac = $isRegac;
         $this->updatedAt = new \DateTime();
 
         return $this;
