@@ -54,19 +54,13 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
                 <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" id="entryDate">
             </div>
-            <div class="flex justify-between items-center">
-                <button type="button" id="deleteEntryBtn" onclick="deleteCurrentEntry()" class="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition hidden">
-                    <i data-lucide="trash-2" class="w-4 h-4 inline-block mr-2"></i>
-                    Eliminar
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="hideModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                    Cancelar
                 </button>
-                <div class="flex space-x-3 ml-auto">
-                    <button type="button" onclick="hideModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
-                        Guardar
-                    </button>
-                </div>
+                <button type="submit" class="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
+                    Guardar
+                </button>
             </div>
         </form>
     </div>
@@ -93,7 +87,6 @@
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('entryDate').value = today;
         document.getElementById('modalTitle').textContent = 'Nuevo Registro de Horas';
-        document.getElementById('deleteEntryBtn').classList.add('hidden');
         document.getElementById('entryModal').classList.remove('hidden');
         setTimeout(() => lucide.createIcons(), 50);
     }
@@ -145,11 +138,16 @@
                     });
 
                     let html = '';
+                    const today = new Date().toISOString().split('T')[0];
+                    
                     Object.keys(groupedByDate).forEach(date => {
                         const entries = groupedByDate[date];
                         const totalSeconds = entries.reduce((sum, e) => sum + e.durationSeconds, 0);
                         const totalHours = Math.floor(totalSeconds / 3600);
                         const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
+                        
+                        // Check if any entry is not marked as REGAC
+                        const hasNonRegac = entries.some(e => !e.isRegac);
 
                         const dateObj = new Date(date + 'T00:00:00');
                         const formattedDate = dateObj.toLocaleDateString('es-ES', {
@@ -158,28 +156,37 @@
                             month: 'long',
                             day: 'numeric'
                         });
+                        
+                        const isToday = date === today;
+                        const expandedClass = isToday ? '' : 'hidden';
 
                         html += `
                             <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden">
-                                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                                    <div class="flex items-center">
-                                        <i data-lucide="calendar" class="w-5 h-5 text-indigo-600 mr-3"></i>
+                                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition" onclick="toggleDay('${date}')">
+                                    <div class="flex items-center space-x-3">
+                                        <i data-lucide="calendar" class="w-5 h-5 text-indigo-600"></i>
                                         <h3 class="text-sm font-semibold text-gray-900">${formattedDate}</h3>
+                                        ${hasNonRegac ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><i data-lucide="alert-triangle" class="w-3 h-3 mr-1"></i>Sin REGAC</span>' : ''}
                                     </div>
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
-                                        <i data-lucide="clock" class="w-4 h-4 mr-1"></i>
-                                        ${totalHours}h ${totalMinutes}m
-                                    </span>
+                                    <div class="flex items-center space-x-3">
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+                                            <i data-lucide="clock" class="w-4 h-4 mr-1"></i>
+                                            ${totalHours}h ${totalMinutes}m
+                                        </span>
+                                        <i data-lucide="chevron-down" id="chevron-${date}" class="w-5 h-5 text-gray-400 transition-transform ${isToday ? '' : 'rotate-180'}"></i>
+                                    </div>
                                 </div>
+                                <div id="day-${date}" class="${expandedClass}">
                                 <div class="overflow-x-auto">
                                     <table class="min-w-full table-fixed">
                                         <colgroup>
+                                            <col style="width: 11%;">
+                                            <col style="width: 20%;">
+                                            <col style="width: 9%;">
+                                            <col style="width: 28%;">
                                             <col style="width: 12%;">
-                                            <col style="width: 22%;">
-                                            <col style="width: 10%;">
-                                            <col style="width: 30%;">
-                                            <col style="width: 13%;">
-                                            <col style="width: 13%;">
+                                            <col style="width: 12%;">
+                                            <col style="width: 8%;">
                                         </colgroup>
                                         <thead class="bg-gray-50 border-b border-gray-200">
                                             <tr>
@@ -189,6 +196,7 @@
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Horario</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duración</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
@@ -207,16 +215,29 @@
                                 : '-';
 
                             html += `
-                                <tr class="hover:bg-indigo-50 transition cursor-pointer" onclick="editEntry(${entry.id})">
+                                <tr class="hover:bg-indigo-50 transition">
                                     <td class="px-4 py-3 text-sm text-gray-600 truncate" title="${projectName}">${projectName}</td>
                                     <td class="px-4 py-3 text-sm font-medium text-gray-900" title="${taskName}">${taskName}</td>
-                                    <td class="px-4 py-3 text-sm" id="regac-cell-${entry.id}" onclick="event.stopPropagation()">${regacBadge}</td>
+                                    <td class="px-4 py-3 text-sm" id="regac-cell-${entry.id}">${regacBadge}</td>
                                     <td class="px-4 py-3 text-sm text-gray-600">${description}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${schedule}</td>
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
                                             ${entry.formattedDuration}
                                         </span>
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+                                        <div class="flex items-center space-x-1">
+                                            <button onclick="editEntry(${entry.id})" class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition" title="Editar">
+                                                <i data-lucide="edit" class="w-4 h-4"></i>
+                                            </button>
+                                            <button onclick="cloneEntry(${entry.id})" class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition" title="Clonar">
+                                                <i data-lucide="copy" class="w-4 h-4"></i>
+                                            </button>
+                                            <button onclick="deleteEntry(${entry.id})" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Eliminar">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             `;
@@ -225,6 +246,7 @@
                         html += `
                                         </tbody>
                                     </table>
+                                </div>
                                 </div>
                             </div>
                         `;
@@ -313,7 +335,6 @@
                         document.getElementById('entryEndTime').value = entry.endTime || '';
                         document.getElementById('entryDate').value = entry.date;
                         document.getElementById('modalTitle').textContent = 'Editar Registro de Horas';
-                        document.getElementById('deleteEntryBtn').classList.remove('hidden');
                         document.getElementById('entryModal').classList.remove('hidden');
                         setTimeout(() => lucide.createIcons(), 50);
                     }
@@ -321,16 +342,30 @@
             });
     }
 
-    function deleteCurrentEntry() {
-        const id = document.getElementById('entryId').value;
-        if (!id) return;
-
-        hideModal();
-        deleteEntry(id);
+    function cloneEntry(id) {
+        fetch(`/time-entries/list`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.entries) {
+                    const entry = data.entries.find(e => e.id === id);
+                    if (entry) {
+                        // Clear the ID to create a new entry
+                        document.getElementById('entryId').value = '';
+                        document.getElementById('entryTask').value = entry.task ? entry.task.id : '';
+                        document.getElementById('entryDescription').value = entry.description || '';
+                        document.getElementById('entryStartTime').value = '';
+                        document.getElementById('entryEndTime').value = '';
+                        document.getElementById('entryDate').value = entry.date;
+                        document.getElementById('modalTitle').textContent = 'Clonar Registro de Horas';
+                        document.getElementById('entryModal').classList.remove('hidden');
+                        setTimeout(() => lucide.createIcons(), 50);
+                    }
+                }
+            });
     }
 
     function deleteEntry(id) {
-        showConfirm(
+        showConfirmModal(
             '¿Eliminar registro?',
             'Esta acción no se puede deshacer.',
             () => {
@@ -381,6 +416,8 @@
                 cell.innerHTML = badge;
                 lucide.createIcons();
                 showToast('Estado REGAC actualizado', 'success');
+                // Reload entries to update the "Sin REGAC" badge
+                loadEntries();
             } else {
                 cell.innerHTML = originalContent;
                 lucide.createIcons();
@@ -392,6 +429,19 @@
             lucide.createIcons();
             showToast('Error al actualizar: ' + error.message, 'error');
         });
+    }
+
+    function toggleDay(date) {
+        const dayContent = document.getElementById('day-' + date);
+        const chevron = document.getElementById('chevron-' + date);
+        
+        if (dayContent.classList.contains('hidden')) {
+            dayContent.classList.remove('hidden');
+            chevron.classList.remove('rotate-180');
+        } else {
+            dayContent.classList.add('hidden');
+            chevron.classList.add('rotate-180');
+        }
     }
 </script>
 {% endblock %}
