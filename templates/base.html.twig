@@ -1921,6 +1921,56 @@
             }
         }
 
+        // Global Escape key handler for modals
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                // Check for visible modals in base.html.twig
+                const baseModals = [
+                    'createModal',
+                    'backupModal',
+                    'confirmModal',
+                    'renameModal'
+                ];
+                
+                let modalClosed = false;
+                
+                baseModals.forEach(modalId => {
+                    const modal = document.getElementById(modalId);
+                    if (modal && !modal.classList.contains('hidden')) {
+                        modal.classList.add('hidden');
+                        modalClosed = true;
+                        
+                        // Clear confirm callback if it was the confirm modal
+                        if (modalId === 'confirmModal') {
+                            confirmCallback = null;
+                        }
+                    }
+                });
+                
+                // If no base modal was closed, check for modals in other templates
+                if (!modalClosed) {
+                    // Check for specific modal IDs from other templates
+                    const otherModals = [
+                        'taskModal',
+                        'completedTasksModal',
+                        'entryModal',
+                        'createTaskModal',
+                        'exportModal',
+                        'workReportModal',
+                        'nameInputModal',
+                        'createEntryModal'
+                    ];
+                    
+                    otherModals.forEach(modalId => {
+                        const modal = document.getElementById(modalId);
+                        if (modal && !modal.classList.contains('hidden')) {
+                            modal.classList.add('hidden');
+                        }
+                    });
+                }
+            }
+        });
+
         // Check saved theme preference
         const savedTheme = getCookie('theme');
         if (savedTheme === 'dark') {
