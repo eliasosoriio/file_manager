@@ -141,6 +141,39 @@ class ProjectController extends AbstractController
         }
     }
 
+    #[Route('/{id}/tasks', name: 'app_projects_tasks', methods: ['GET'])]
+    public function getTasks(int $id): JsonResponse
+    {
+        $project = $this->projectRepository->find($id);
+
+        if (!$project) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Proyecto no encontrado',
+            ], 404);
+        }
+
+        $tasks = [];
+        foreach ($project->getTasks() as $task) {
+            $tasks[] = [
+                'id' => $task->getId(),
+                'name' => $task->getName(),
+                'status' => $task->getStatus(),
+                'ticketNumber' => $task->getTicketNumber(),
+            ];
+        }
+
+        return $this->json([
+            'success' => true,
+            'project' => [
+                'id' => $project->getId(),
+                'name' => $project->getName(),
+                'color' => $project->getColor(),
+            ],
+            'tasks' => $tasks,
+        ]);
+    }
+
     #[Route('/{id}/delete', name: 'app_projects_delete', methods: ['DELETE', 'POST'])]
     public function delete(int $id): JsonResponse
     {

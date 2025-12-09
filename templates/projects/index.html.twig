@@ -74,6 +74,26 @@
     </div>
 </div>
 
+<!-- Project Tasks Modal -->
+<div class="modal fade" id="projectTasksModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="projectTasksTitle">Tareas del Proyecto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="projectTasksContent">
+                    <!-- Tasks will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .project-card {
         border-left: 4px solid;
@@ -132,12 +152,13 @@ function loadProjects() {
     fetch('/projects')
         .then(response => response.json())
         .then(data => {
+            console.log('Proyectos cargados:', data);
             const container = document.getElementById('projectsList');
             container.innerHTML = '';
 
             if (data.projects && data.projects.length > 0) {
                 data.projects.forEach(project => {
-                    container.innerHTML += `
+                    const projectHtml = `
                         <div class="col-md-4 mb-3">
                             <div class="card project-card" style="border-left-color: ${project.color}">
                                 <div class="card-body">
@@ -147,10 +168,13 @@ function loadProjects() {
                                         ${project.taskCount} tarea(s)
                                     </small>
                                     <div class="mt-3">
-                                        <button class="btn btn-sm btn-outline-primary" onclick="editProject(${project.id})">
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewProjectTasks(${project.id})" title="Ver tareas">
+                                            <i class="fas fa-tasks"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editProject(${project.id})" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProject(${project.id})">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProject(${project.id})" title="Eliminar">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -158,10 +182,14 @@ function loadProjects() {
                             </div>
                         </div>
                     `;
+                    container.innerHTML += projectHtml;
                 });
             } else {
                 container.innerHTML = '<div class="col-12"><div class="alert alert-info">No hay proyectos creados aún.</div></div>';
             }
+        })
+        .catch(error => {
+            console.error('Error al cargar proyectos:', error);
         });
 }
 
@@ -194,6 +222,89 @@ function deleteProject(id) {
             }
         });
     }
+}
+
+function viewProjectTasks(projectId) {
+    fetch(`/projects/${projectId}/tasks`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar las tareas');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                document.getElementById('projectTasksTitle').textContent = `Tareas de ${data.project.name}`;
+                
+                const content = document.getElementById('projectTasksContent');
+                
+                if (data.tasks && data.tasks.length > 0) {
+                    // Group tasks by status
+                    const tasksByStatus = {
+                        pending: [],
+                        in_progress: [],
+                        recurring: [],
+                        completed: []
+                    };
+                    
+                    data.tasks.forEach(task => {
+                        tasksByStatus[task.status].push(task);
+                    });
+                    
+                    const statusLabels = {
+                        pending: { name: 'Pendientes', color: 'warning', icon: 'clock' },
+                        in_progress: { name: 'En Progreso', color: 'primary', icon: 'play-circle' },
+                        recurring: { name: 'Recurrentes', color: 'info', icon: 'repeat' },
+                        completed: { name: 'Completadas', color: 'success', icon: 'check-circle' }
+                    };
+                    
+                    let html = '';
+                    
+                    for (const [status, tasks] of Object.entries(tasksByStatus)) {
+                        if (tasks.length > 0) {
+                            const statusInfo = statusLabels[status];
+                            html += `
+                                <div class="mb-4">
+                                    <h6 class="text-${statusInfo.color} mb-3">
+                                        <i class="fas fa-${statusInfo.icon}"></i> ${statusInfo.name} (${tasks.length})
+                                    </h6>
+                                    <div class="list-group">
+                            `;
+                            
+                            tasks.forEach(task => {
+                                html += `
+                                    <div class="list-group-item">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">${task.name}</h6>
+                                            ${task.ticketNumber ? `<small class="text-muted">#${task.ticketNumber}</small>` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            
+                            html += `
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = '<div class="alert alert-info">Este proyecto no tiene tareas asociadas.</div>';
+                }
+                
+                // Mostrar el modal después de cargar el contenido
+                const modal = new bootstrap.Modal(document.getElementById('projectTasksModal'));
+                modal.show();
+            } else {
+                alert(data.message || 'Error al cargar las tareas');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar las tareas del proyecto');
+        });
 }
     });
 }

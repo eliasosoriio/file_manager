@@ -484,6 +484,155 @@
             background-color: #f0f4ff !important;
         }
 
+        /* Project Tasks Status Styles - Light Mode */
+        .task-name {
+            color: #1f2937;
+        }
+
+        .task-ticket {
+            color: #6b7280;
+        }
+
+        /* Pending (Yellow) */
+        .status-pending-title {
+            color: #d97706;
+        }
+
+        .status-pending-card {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+        }
+
+        /* In Progress (Blue) */
+        .status-in-progress-title {
+            color: #2563eb;
+        }
+
+        .status-in-progress-card {
+            background-color: #dbeafe;
+            border-left: 4px solid #3b82f6;
+        }
+
+        /* Recurring (Purple) */
+        .status-recurring-title {
+            color: #7c3aed;
+        }
+
+        .status-recurring-card {
+            background-color: #ede9fe;
+            border-left: 4px solid #8b5cf6;
+        }
+
+        /* On Hold (Orange) */
+        .status-on-hold-title {
+            color: #ea580c;
+        }
+
+        .status-on-hold-card {
+            background-color: #ffedd5;
+            border-left: 4px solid #f97316;
+        }
+
+        /* Completed (Green) */
+        .status-completed-title {
+            color: #059669;
+        }
+
+        .status-completed-card {
+            background-color: #d1fae5;
+            border-left: 4px solid #10b981;
+        }
+
+        /* Project Tasks Status Styles - Dark Mode */
+        body.dark-mode .task-name {
+            color: #f3f4f6;
+        }
+
+        body.dark-mode .task-ticket {
+            color: #9ca3af;
+        }
+
+        /* Pending (Yellow) - Dark Mode */
+        body.dark-mode .status-pending-title {
+            color: #fbbf24;
+        }
+
+        body.dark-mode .status-pending-card {
+            background-color: rgba(251, 191, 36, 0.15);
+            border-left-color: #f59e0b;
+        }
+
+        /* In Progress (Blue) - Dark Mode */
+        body.dark-mode .status-in-progress-title {
+            color: #60a5fa;
+        }
+
+        body.dark-mode .status-in-progress-card {
+            background-color: rgba(96, 165, 250, 0.15);
+            border-left-color: #3b82f6;
+        }
+
+        /* Recurring (Purple) - Dark Mode */
+        body.dark-mode .status-recurring-title {
+            color: #a78bfa;
+        }
+
+        body.dark-mode .status-recurring-card {
+            background-color: rgba(167, 139, 250, 0.15);
+            border-left-color: #8b5cf6;
+        }
+
+        /* On Hold (Orange) - Dark Mode */
+        body.dark-mode .status-on-hold-title {
+            color: #fb923c;
+        }
+
+        body.dark-mode .status-on-hold-card {
+            background-color: rgba(251, 146, 60, 0.15);
+            border-left-color: #f97316;
+        }
+
+        /* Completed (Green) - Dark Mode */
+        body.dark-mode .status-completed-title {
+            color: #34d399;
+        }
+
+        body.dark-mode .status-completed-card {
+            background-color: rgba(52, 211, 153, 0.15);
+            border-left-color: #10b981;
+        }
+
+        /* Month Header Styles - Light Mode */
+        .month-header-gradient {
+            background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
+        }
+
+        .month-header-gradient:hover {
+            background: linear-gradient(135deg, #c7d2fe 0%, #ddd6fe 100%);
+        }
+
+        .month-header-text {
+            color: #1e293b;
+        }
+
+        /* Month Header Styles - Dark Mode */
+        body.dark-mode .month-header-gradient {
+            background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+        }
+
+        body.dark-mode .month-header-gradient:hover {
+            background: linear-gradient(135deg, #3730a3 0%, #5b21b6 100%);
+        }
+
+        body.dark-mode .month-header-text {
+            color: #ffffff;
+        }
+
+        .drop-zone {
+            border: 2px dashed #667eea !important;
+            background-color: #f0f4ff !important;
+        }
+
         /* Search Dropdown */
         .search-dropdown {
             display: none;
@@ -1953,12 +2102,16 @@
                     const otherModals = [
                         'taskModal',
                         'completedTasksModal',
+                        'onHoldTasksModal',
+                        'timeEntryModal',
                         'entryModal',
                         'createTaskModal',
                         'exportModal',
                         'workReportModal',
                         'nameInputModal',
-                        'createEntryModal'
+                        'createEntryModal',
+                        'projectModal',
+                        'projectTasksModal'
                     ];
                     
                     otherModals.forEach(modalId => {

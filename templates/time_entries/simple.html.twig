@@ -128,19 +128,68 @@
                         return;
                     }
 
-                    // Group by date
-                    const groupedByDate = {};
+                    // Group by month and then by date
+                    const groupedByMonth = {};
                     data.entries.forEach(entry => {
-                        if (!groupedByDate[entry.date]) {
-                            groupedByDate[entry.date] = [];
+                        const dateObj = new Date(entry.date + 'T00:00:00');
+                        const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+                        
+                        if (!groupedByMonth[monthKey]) {
+                            groupedByMonth[monthKey] = {};
                         }
-                        groupedByDate[entry.date].push(entry);
+                        if (!groupedByMonth[monthKey][entry.date]) {
+                            groupedByMonth[monthKey][entry.date] = [];
+                        }
+                        groupedByMonth[monthKey][entry.date].push(entry);
                     });
 
                     let html = '';
                     const today = new Date().toISOString().split('T')[0];
+                    const currentMonth = today.substring(0, 7);
                     
-                    Object.keys(groupedByDate).forEach(date => {
+                    // Sort months in descending order (most recent first)
+                    const sortedMonths = Object.keys(groupedByMonth).sort().reverse();
+                    
+                    sortedMonths.forEach(monthKey => {
+                        const groupedByDate = groupedByMonth[monthKey];
+                        
+                        // Calculate total hours for the month
+                        let monthTotalSeconds = 0;
+                        Object.values(groupedByDate).forEach(entries => {
+                            monthTotalSeconds += entries.reduce((sum, e) => sum + e.durationSeconds, 0);
+                        });
+                        const monthTotalHours = Math.floor(monthTotalSeconds / 3600);
+                        const monthTotalMinutes = Math.floor((monthTotalSeconds % 3600) / 60);
+                        
+                        // Format month name
+                        const [year, month] = monthKey.split('-');
+                        const monthDate = new Date(year, month - 1, 1);
+                        const monthName = monthDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+                        
+                        const isCurrentMonth = monthKey === currentMonth;
+                        const monthExpandedClass = isCurrentMonth ? '' : 'hidden';
+                        
+                        html += `
+                            <div class="mb-6">
+                                <div class="month-header-gradient rounded-t-xl px-6 py-4 cursor-pointer transition" onclick="toggleMonth('${monthKey}')">
+                                    <div class="flex items-center justify-between month-header-text">
+                                        <div class="flex items-center space-x-3">
+                                            <i data-lucide="calendar-days" class="w-6 h-6"></i>
+                                            <h2 class="text-xl font-bold capitalize">${monthName}</h2>
+                                        </div>
+                                        <div class="flex items-center space-x-3">
+                                            <span class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold bg-white bg-opacity-20 backdrop-blur-sm">
+                                                <i data-lucide="clock" class="w-4 h-4 mr-2"></i>
+                                                Total: ${monthTotalHours}h ${monthTotalMinutes}m
+                                            </span>
+                                            <i data-lucide="chevron-down" id="chevron-month-${monthKey}" class="w-6 h-6 transition-transform ${isCurrentMonth ? '' : 'rotate-180'}"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="month-${monthKey}" class="${monthExpandedClass}">
+                        `;
+                    
+                    Object.keys(groupedByDate).sort().reverse().forEach(date => {
                         const entries = groupedByDate[date];
                         const totalSeconds = entries.reduce((sum, e) => sum + e.durationSeconds, 0);
                         const totalHours = Math.floor(totalSeconds / 3600);
@@ -247,6 +296,13 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    // Close month div
+                    html += `
                                 </div>
                             </div>
                         `;
@@ -429,6 +485,19 @@
             lucide.createIcons();
             showToast('Error al actualizar: ' + error.message, 'error');
         });
+    }
+
+    function toggleMonth(monthKey) {
+        const monthContent = document.getElementById('month-' + monthKey);
+        const chevron = document.getElementById('chevron-month-' + monthKey);
+        
+        if (monthContent.classList.contains('hidden')) {
+            monthContent.classList.remove('hidden');
+            chevron.classList.remove('rotate-180');
+        } else {
+            monthContent.classList.add('hidden');
+            chevron.classList.add('rotate-180');
+        }
     }
 
     function toggleDay(date) {

@@ -27,7 +27,7 @@ class TaskManagementController extends AbstractController
         if ($request->query->get('format') === 'json' || $request->isXmlHttpRequest()) {
             $qb = $this->taskRepository->createQueryBuilder('t');
             
-            // Si viene del registro de tiempo (excludeCompleted=true), excluir completadas
+            // Si viene del registro de tiempo (excludeCompleted=true), excluir completadas y en espera
             if ($request->query->get('excludeCompleted') === 'true') {
                 $qb->where('t.status IN (:statuses)')
                    ->setParameter('statuses', ['pending', 'in_progress', 'recurring']);

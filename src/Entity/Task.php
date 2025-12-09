@@ -23,7 +23,7 @@ class Task
     private ?Project $project = null;
 
     #[ORM\Column(length: 50)]
-    private string $status = 'pending'; // pending, in_progress, recurring, completed
+    private string $status = 'pending'; // pending, in_progress, recurring, on_hold, completed
 
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $ticketNumber = null;

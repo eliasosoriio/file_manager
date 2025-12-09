@@ -31,17 +31,23 @@
                 <option value="pending">Pendiente</option>
                 <option value="in_progress">En progreso</option>
                 <option value="recurring">Recurrente</option>
+                <option value="on_hold">En espera</option>
                 <option value="completed">Completada</option>
             </select>
         </div>
     </div>
 
     <!-- Button to view completed tasks -->
-    <div class="mb-6">
+    <div class="mb-6 flex space-x-4">
         <button onclick="showCompletedTasksModal()" class="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition inline-flex items-center">
             <i data-lucide="check-circle" class="w-4 h-4 mr-2"></i>
             Ver Tareas Completadas
             <span id="completedCount" class="ml-2 px-2 py-0.5 bg-green-700 rounded-full text-xs font-semibold">0</span>
+        </button>
+        <button onclick="showOnHoldTasksModal()" class="px-4 py-2 text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition inline-flex items-center">
+            <i data-lucide="pause-circle" class="w-4 h-4 mr-2"></i>
+            Ver Tareas En Espera
+            <span id="onHoldCount" class="ml-2 px-2 py-0.5 bg-orange-700 rounded-full text-xs font-semibold">0</span>
         </button>
     </div>
 
@@ -102,6 +108,7 @@
                     <option value="pending">Pendiente</option>
                     <option value="in_progress">En progreso</option>
                     <option value="recurring">Recurrente</option>
+                    <option value="on_hold">En espera</option>
                     <option value="completed">Completada</option>
                 </select>
             </div>
@@ -169,6 +176,103 @@
     </div>
 </div>
 
+<!-- On Hold Tasks Modal -->
+<div id="onHoldTasksModal" class="modal hidden">
+    <div class="modal-overlay" onclick="hideOnHoldTasksModal()"></div>
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                <i data-lucide="pause-circle" class="w-5 h-5 mr-2 text-orange-600"></i>
+                Tareas En Espera
+            </h3>
+            <button onclick="hideOnHoldTasksModal()" class="text-gray-400 hover:text-gray-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <div class="max-h-96 overflow-y-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarea</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proyecto</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="onHoldTasksTableBody" class="bg-white divide-y divide-gray-200">
+                    <!-- On hold tasks will be loaded here -->
+                </tbody>
+            </table>
+            <div id="noOnHoldTasks" class="text-center py-8 text-gray-500 hidden">
+                <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i>
+                <p>No hay tareas en espera</p>
+            </div>
+        </div>
+        
+        <div class="mt-4 flex justify-end">
+            <button onclick="hideOnHoldTasksModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Time Entry Modal -->
+<div id="timeEntryModal" class="modal hidden">
+    <div class="modal-overlay" onclick="hideTimeEntryModal()"></div>
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                <i data-lucide="clock" class="w-5 h-5 mr-2 text-indigo-600"></i>
+                <span id="timeEntryModalTitle">Nuevo Registro de Horas</span>
+            </h3>
+            <button onclick="hideTimeEntryModal()" class="text-gray-400 hover:text-gray-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <form id="timeEntryForm" onsubmit="saveTimeEntry(event)">
+            <input type="hidden" id="timeEntryTaskId">
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tarea</label>
+                <input type="text" id="timeEntryTaskName" class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900" readonly>
+            </div>
+            
+            <div class="mb-4">
+                <label for="timeEntryDate" class="block text-sm font-medium text-gray-700 mb-2">Fecha *</label>
+                <input type="date" id="timeEntryDate" required class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 text-gray-900">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="timeEntryStartTime" class="block text-sm font-medium text-gray-700 mb-2">Hora inicio *</label>
+                    <input type="time" id="timeEntryStartTime" required class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 text-gray-900">
+                </div>
+                <div>
+                    <label for="timeEntryEndTime" class="block text-sm font-medium text-gray-700 mb-2">Hora fin *</label>
+                    <input type="time" id="timeEntryEndTime" required class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 text-gray-900">
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="timeEntryDescription" class="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
+                <textarea id="timeEntryDescription" rows="3" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 text-gray-900"></textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="hideTimeEntryModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-primary px-4 py-2 text-white rounded-lg">
+                    Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block javascripts %}
@@ -192,7 +296,10 @@
         }
 
         function hideModal() {
-            document.getElementById('taskModal').classList.add('hidden');
+            const taskModal = document.getElementById('taskModal');
+            taskModal.classList.add('hidden');
+            // Restaurar z-index por defecto
+            taskModal.style.zIndex = '9999';
         }
 
         function loadProjects() {
@@ -216,6 +323,7 @@
                 'pending': 'yellow',
                 'in_progress': 'blue',
                 'recurring': 'purple',
+                'on_hold': 'orange',
                 'completed': 'green'
             };
             return colors[status] || 'gray';
@@ -226,6 +334,7 @@
                 'pending': 'clock',
                 'in_progress': 'loader',
                 'recurring': 'repeat',
+                'on_hold': 'pause-circle',
                 'completed': 'check-circle'
             };
             return icons[status] || 'circle';
@@ -249,6 +358,7 @@
                     document.getElementById('recurringTasks').innerHTML = '';
 
                     let completedCount = 0;
+                    let onHoldCount = 0;
 
                     if (data.tasks && data.tasks.length > 0) {
                         data.tasks.forEach(task => {
@@ -260,14 +370,23 @@
                                 completedCount++;
                                 return;
                             }
+
+                            // Count on hold tasks but don't display them in the main view
+                            if (task.status === 'on_hold') {
+                                onHoldCount++;
+                                return;
+                            }
                             
-                            const card = '<div onclick="editTask(' + task.id + ')" class="bg-white rounded-lg shadow-sm border-l-4 border-' + color + '-500 p-3 hover:shadow-md transition cursor-pointer">' +
-                                '<div class="flex items-center justify-between">' +
-                                    '<h4 class="text-sm font-semibold text-gray-900 truncate flex-1 mr-2">' + task.name + '</h4>' +
+                            const card = '<div class="bg-white rounded-lg shadow-sm border-l-4 border-' + color + '-500 p-3 hover:shadow-md transition">' +
+                                '<div class="flex items-center justify-between mb-2">' +
+                                    '<h4 onclick="editTask(' + task.id + ')" class="text-sm font-semibold text-gray-900 truncate flex-1 mr-2 cursor-pointer">' + task.name + '</h4>' +
                                     '<div class="flex items-center justify-center w-6 h-6 rounded-lg bg-' + color + '-100 flex-shrink-0">' +
                                         '<i data-lucide="' + icon + '" class="w-3 h-3 text-' + color + '-600"></i>' +
                                     '</div>' +
                                 '</div>' +
+                                '<button onclick="event.stopPropagation(); addTimeEntryForTask(' + task.id + ', \'' + task.name.replace(/'/g, "\\'") + '\')" class="w-full px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded transition flex items-center justify-center" title="Añadir registro de horas">' +
+                                    '<i data-lucide="clock" class="w-3 h-3 mr-1"></i> Añadir horas' +
+                                '</button>' +
                             '</div>';
 
                             if (task.status === 'pending') {
@@ -282,6 +401,8 @@
 
                     // Update completed count
                     document.getElementById('completedCount').textContent = completedCount;
+                    // Update on hold count
+                    document.getElementById('onHoldCount').textContent = onHoldCount;
 
                     lucide.createIcons();
                 });
@@ -329,7 +450,17 @@
                         document.getElementById('taskTicket').value = data.task.ticketNumber || '';
                         document.getElementById('modalTitle').textContent = 'Editar Tarea';
                         document.getElementById('deleteTaskBtn').classList.remove('hidden');
-                        document.getElementById('taskModal').classList.remove('hidden');
+                        
+                        const taskModal = document.getElementById('taskModal');
+                        taskModal.classList.remove('hidden');
+                        // Aumentar z-index si está abierto el modal de tareas completadas
+                        const completedModal = document.getElementById('completedTasksModal');
+                        if (completedModal && !completedModal.classList.contains('hidden')) {
+                            taskModal.style.zIndex = '10001';
+                        } else {
+                            taskModal.style.zIndex = '9999';
+                        }
+                        
                         setTimeout(() => lucide.createIcons(), 50);
                     }
                 });
@@ -356,6 +487,7 @@
                             showToast('Tarea eliminada exitosamente', 'success');
                             hideModal();
                             hideCompletedTasksModal();
+                            hideOnHoldTasksModal();
                             loadTasks();
                         } else {
                             showToast(result.error || 'Error al eliminar', 'error');
@@ -400,6 +532,108 @@
 
         function hideCompletedTasksModal() {
             document.getElementById('completedTasksModal').classList.add('hidden');
+        }
+
+        function showOnHoldTasksModal() {
+            // Load on hold tasks
+            fetch('/tasks-management?format=json&status=on_hold')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('onHoldTasksTableBody');
+                    const noTasks = document.getElementById('noOnHoldTasks');
+                    tbody.innerHTML = '';
+
+                    if (data.tasks && data.tasks.length > 0) {
+                        noTasks.classList.add('hidden');
+                        data.tasks.forEach(task => {
+                            const row = '<tr class="hover:bg-gray-50">' +
+                                '<td class="px-4 py-3 text-sm text-gray-900">' + task.name + '</td>' +
+                                '<td class="px-4 py-3 text-sm text-gray-600">' + task.project.name + '</td>' +
+                                '<td class="px-4 py-3 text-sm text-gray-600">' + (task.ticketNumber || '-') + '</td>' +
+                                '<td class="px-4 py-3 text-sm">' +
+                                    '<button onclick="editTask(' + task.id + ')" class="text-indigo-600 hover:text-indigo-800 mr-2" title="Editar">' +
+                                        '<i data-lucide="edit" class="w-4 h-4"></i>' +
+                                    '</button>' +
+                                '</td>' +
+                            '</tr>';
+                            tbody.innerHTML += row;
+                        });
+                    } else {
+                        noTasks.classList.remove('hidden');
+                    }
+
+                    document.getElementById('onHoldTasksModal').classList.remove('hidden');
+                    setTimeout(() => lucide.createIcons(), 50);
+                });
+        }
+
+        function hideOnHoldTasksModal() {
+            document.getElementById('onHoldTasksModal').classList.add('hidden');
+        }
+
+        function addTimeEntryForTask(taskId, taskName) {
+            document.getElementById('timeEntryTaskId').value = taskId;
+            document.getElementById('timeEntryTaskName').value = taskName;
+            
+            // Set today's date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('timeEntryDate').value = today;
+            
+            // Clear other fields
+            document.getElementById('timeEntryStartTime').value = '';
+            document.getElementById('timeEntryEndTime').value = '';
+            document.getElementById('timeEntryDescription').value = '';
+            
+            document.getElementById('timeEntryModalTitle').textContent = 'Nuevo Registro de Horas';
+            document.getElementById('timeEntryModal').classList.remove('hidden');
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        function hideTimeEntryModal() {
+            document.getElementById('timeEntryModal').classList.add('hidden');
+        }
+
+        function saveTimeEntry(event) {
+            event.preventDefault();
+            
+            const taskId = document.getElementById('timeEntryTaskId').value;
+            const data = {
+                taskId: parseInt(taskId),
+                date: document.getElementById('timeEntryDate').value,
+                startTime: document.getElementById('timeEntryStartTime').value,
+                endTime: document.getElementById('timeEntryEndTime').value,
+                description: document.getElementById('timeEntryDescription').value || ''
+            };
+
+            fetch('/time-entries/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    hideTimeEntryModal();
+                    showToast('Registro de horas creado exitosamente', 'success');
+                } else {
+                    showToast(result.message || 'Error al crear el registro', 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error: ' + error.message, 'error');
+            });
+        }
+
+        function showToast(message, type) {
+            // Simple toast notification
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
         }
     </script>
 {% endblock %}
