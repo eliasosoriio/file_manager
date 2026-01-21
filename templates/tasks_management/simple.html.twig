@@ -503,14 +503,16 @@
                         });
 
                         // Render each project group
-                        Object.values(tasksByProject).forEach(group => {
+                        Object.values(tasksByProject).forEach((group, index) => {
+                            const groupId = 'completed-project-' + group.project.id;
                             const projectSection = '<div class="mb-6">' +
-                                '<div class="flex items-center mb-3 pb-2 border-b-2 border-gray-200" style="border-color: ' + (group.project.color || '#6B7280') + '">' +
+                                '<div class="flex items-center mb-3 pb-2 border-b-2 cursor-pointer hover:opacity-80 transition" style="border-color: ' + (group.project.color || '#6B7280') + '" onclick="toggleProjectGroup(\'' + groupId + '\')">' +
+                                    '<i data-lucide="chevron-right" class="w-5 h-5 mr-2 transition-transform duration-300" id="chevron-' + groupId + '"></i>' +
                                     '<div class="w-4 h-4 rounded mr-2" style="background-color: ' + (group.project.color || '#6B7280') + '"></div>' +
-                                    '<h4 class="text-base font-semibold text-gray-800">' + group.project.name + '</h4>' +
-                                    '<span class="ml-2 px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs font-medium">' + group.tasks.length + '</span>' +
+                                    '<h4 class="text-base font-semibold" style="color: var(--text-primary)">' + group.project.name + '</h4>' +
+                                    '<span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: var(--bg-tertiary); color: var(--text-primary)">' + group.tasks.length + '</span>' +
                                 '</div>' +
-                                '<div class="space-y-2">';
+                                '<div class="space-y-2 hidden" id="' + groupId + '">';
                             
                             let tasksHtml = '';
                             group.tasks.forEach(task => {
@@ -573,14 +575,16 @@
                         });
 
                         // Render each project group
-                        Object.values(tasksByProject).forEach(group => {
+                        Object.values(tasksByProject).forEach((group, index) => {
+                            const groupId = 'onhold-project-' + group.project.id;
                             const projectSection = '<div class="mb-6">' +
-                                '<div class="flex items-center mb-3 pb-2 border-b-2 border-gray-200" style="border-color: ' + (group.project.color || '#6B7280') + '">' +
+                                '<div class="flex items-center mb-3 pb-2 border-b-2 cursor-pointer hover:opacity-80 transition" style="border-color: ' + (group.project.color || '#6B7280') + '" onclick="toggleProjectGroup(\'' + groupId + '\')">' +
+                                    '<i data-lucide="chevron-right" class="w-5 h-5 mr-2 transition-transform duration-300" id="chevron-' + groupId + '"></i>' +
                                     '<div class="w-4 h-4 rounded mr-2" style="background-color: ' + (group.project.color || '#6B7280') + '"></div>' +
-                                    '<h4 class="text-base font-semibold text-gray-800">' + group.project.name + '</h4>' +
-                                    '<span class="ml-2 px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs font-medium">' + group.tasks.length + '</span>' +
+                                    '<h4 class="text-base font-semibold" style="color: var(--text-primary)">' + group.project.name + '</h4>' +
+                                    '<span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: var(--bg-tertiary); color: var(--text-primary)">' + group.tasks.length + '</span>' +
                                 '</div>' +
-                                '<div class="space-y-2">';
+                                '<div class="space-y-2 hidden" id="' + groupId + '">';
                             
                             let tasksHtml = '';
                             group.tasks.forEach(task => {
@@ -615,6 +619,22 @@
 
         function hideOnHoldTasksModal() {
             document.getElementById('onHoldTasksModal').classList.add('hidden');
+        }
+
+        function toggleProjectGroup(groupId) {
+            const group = document.getElementById(groupId);
+            const chevron = document.getElementById('chevron-' + groupId);
+            
+            if (group.classList.contains('hidden')) {
+                group.classList.remove('hidden');
+                chevron.style.transform = 'rotate(90deg)';
+            } else {
+                group.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+            
+            // Recreate icons after DOM change
+            setTimeout(() => lucide.createIcons(), 50);
         }
 
         function addTimeEntryForTask(taskId, taskName) {
