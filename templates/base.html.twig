@@ -118,6 +118,14 @@
             background-color: #374151 !important;
         }
 
+        body.dark-mode .bg-yellow-100 {
+            background-color: rgba(251, 191, 36, 0.2) !important;
+        }
+
+        body.dark-mode .text-yellow-800 {
+            color: #fbbf24 !important;
+        }
+
         body.dark-mode .search-dropdown {
             background-color: #2d3748;
             border-color: #4a5568;
@@ -628,6 +636,40 @@
             color: #ffffff;
         }
 
+        /* Week Header Styles - Light Mode */
+        .from-indigo-50 {
+            --tw-gradient-from: #eef2ff;
+        }
+
+        .to-purple-50 {
+            --tw-gradient-to: #faf5ff;
+        }
+
+        .hover\:from-indigo-100:hover {
+            --tw-gradient-from: #e0e7ff;
+        }
+
+        .hover\:to-purple-100:hover {
+            --tw-gradient-to: #f3e8ff;
+        }
+
+        /* Week Header Styles - Dark Mode */
+        body.dark-mode .from-indigo-50 {
+            --tw-gradient-from: #312e81 !important;
+        }
+
+        body.dark-mode .to-purple-50 {
+            --tw-gradient-to: #581c87 !important;
+        }
+
+        body.dark-mode .hover\:from-indigo-100:hover {
+            --tw-gradient-from: #4338ca !important;
+        }
+
+        body.dark-mode .hover\:to-purple-100:hover {
+            --tw-gradient-to: #6b21a8 !important;
+        }
+
         .drop-zone {
             border: 2px dashed #667eea !important;
             background-color: #f0f4ff !important;
@@ -838,6 +880,11 @@
                 <a href="{{ path('app_time_entries_index') }}" class="sidebar-item flex items-center px-4 py-3 text-gray-700 rounded-lg {% if app.request.get('_route') starts with 'app_time_entries' %}active{% endif %}">
                     <i data-lucide="clock" class="w-5 h-5 mr-3"></i>
                     Registro de Horas
+                </a>
+
+                <a href="{{ path('app_work_schedule_index') }}" class="sidebar-item flex items-center px-4 py-3 text-gray-700 rounded-lg {% if app.request.get('_route') starts with 'app_work_schedule' %}active{% endif %}">
+                    <i data-lucide="calendar-clock" class="w-5 h-5 mr-3"></i>
+                    Horario de Trabajo
                 </a>
 
                 <div class="pt-4 mt-4 border-t border-gray-200">

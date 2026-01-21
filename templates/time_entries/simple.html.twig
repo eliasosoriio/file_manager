@@ -128,19 +128,138 @@
                         return;
                     }
 
-                    // Group by month and then by date
+                    // Helper: ISO week number and year for a given date
+                    function getIsoWeekData(date) {
+                        const d = new Date(date);
+                        d.setHours(0, 0, 0, 0);
+                        
+                        // Copy date so we don't modify original
+                        const target = new Date(d.valueOf());
+                        
+                        // ISO week date weeks start on Monday, so correct the day number
+                        const dayNr = (d.getDay() + 6) % 7;
+                        
+                        // Set to nearest Thursday (current date + 4 - current day number)
+                        target.setDate(target.getDate() - dayNr + 3);
+                        
+                        // January 4 is always in week 1
+                        const jan4 = new Date(target.getFullYear(), 0, 4);
+                        
+                        // Calculate week number
+                        const dayDiff = (target - jan4) / 86400000;
+                        const weekNo = 1 + Math.round((dayDiff - 3 + (jan4.getDay() + 6) % 7) / 7);
+                        
+                        return {
+                            year: target.getFullYear(),
+                            week: weekNo
+                        };
+                    }
+
+                    // Get date range of week, clamped to the month of the provided monthKey (YYYY-MM)
+                    function getWeekRange(date, monthKey) {
+                        const d = new Date(date);
+                        const day = d.getDay();
+                        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+                        const monday = new Date(d.setDate(diff));
+                        const sunday = new Date(monday);
+                        sunday.setDate(monday.getDate() + 6);
+
+                        // Clamp to the current month being rendered
+                        let start = new Date(monday);
+                        let end = new Date(sunday);
+                        if (monthKey) {
+                            const [yStr, mStr] = monthKey.split('-');
+                            const y = parseInt(yStr, 10);
+                            const m = parseInt(mStr, 10) - 1; // 0-based month
+                            const monthStart = new Date(y, m, 1);
+                            const monthEnd = new Date(y, m + 1, 0); // last day of month
+
+                            if (start < monthStart) start = monthStart;
+                            if (end > monthEnd) end = monthEnd;
+                        }
+                        
+                        return {
+                            start,
+                            end,
+                            startStr: start.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+                            endStr: end.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+                        };
+                    }
+
+                    // Group by month, then by week, then by date
                     const groupedByMonth = {};
                     data.entries.forEach(entry => {
                         const dateObj = new Date(entry.date + 'T00:00:00');
                         const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+                        const weekData = getIsoWeekData(entry.date + 'T00:00:00');
+                        const weekKey = `${weekData.year}-W${String(weekData.week).padStart(2, '0')}`;
                         
                         if (!groupedByMonth[monthKey]) {
                             groupedByMonth[monthKey] = {};
                         }
-                        if (!groupedByMonth[monthKey][entry.date]) {
-                            groupedByMonth[monthKey][entry.date] = [];
+                        if (!groupedByMonth[monthKey][weekKey]) {
+                            groupedByMonth[monthKey][weekKey] = {};
                         }
-                        groupedByMonth[monthKey][entry.date].push(entry);
+                        if (!groupedByMonth[monthKey][weekKey][entry.date]) {
+                            groupedByMonth[monthKey][weekKey][entry.date] = [];
+                        }
+                        groupedByMonth[monthKey][weekKey][entry.date].push(entry);
+                    });
+
+                    // Get all unique dates for calculating expected hours
+                    const allDates = [...new Set(data.entries.map(e => e.date))];
+                    
+                    // Fetch expected hours from work schedule
+                    window.expectedHoursByWeek = {};
+                    window.expectedHoursByMonth = {};
+                    fetch('/work-schedule/weekly-hours', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({dates: allDates})
+                    })
+                    .then(r => r.json())
+                    .then(scheduleData => {
+                        if (scheduleData.success) {
+                            // Calculate expected hours per week
+                            Object.keys(groupedByMonth).forEach(monthKey => {
+                                const weeksInMonth = Object.keys(groupedByMonth[monthKey]);
+                                let pendingWeeks = weeksInMonth.length;
+                                
+                                Object.keys(groupedByMonth[monthKey]).forEach(weekKey => {
+                                    const weekDates = Object.keys(groupedByMonth[monthKey][weekKey]);
+                                    // Calculate days of week for this week's dates
+                                    const daysOfWeek = weekDates.map(date => {
+                                        const d = new Date(date + 'T00:00:00');
+                                        return d.getDay() === 0 ? 7 : d.getDay(); // Convert Sunday from 0 to 7
+                                    });
+                                    
+                                    // Fetch expected hours for these specific days
+                                    fetch('/work-schedule/weekly-hours', {
+                                        method: 'POST',
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({dates: weekDates})
+                                    })
+                                    .then(r => r.json())
+                                    .then(result => {
+                                        if (result.success) {
+                                            window.expectedHoursByWeek[weekKey] = result.expectedHours;
+                                            updateWeekDisplay(weekKey);
+                                            
+                                            // Once all weeks are loaded, sum them up for the month total
+                                            pendingWeeks--;
+                                            if (pendingWeeks === 0) {
+                                                let monthTotal = 0;
+                                                weeksInMonth.forEach(wk => {
+                                                    monthTotal += (window.expectedHoursByWeek[wk] || 0);
+                                                });
+                                                window.expectedHoursByMonth[monthKey] = monthTotal;
+                                                updateMonthDisplay(monthKey);
+                                            }
+                                        }
+                                    });
+                                });
+                            });
+                        }
                     });
 
                     let html = '';
@@ -151,13 +270,22 @@
                     const sortedMonths = Object.keys(groupedByMonth).sort().reverse();
                     
                     sortedMonths.forEach(monthKey => {
-                        const groupedByDate = groupedByMonth[monthKey];
+                        const groupedByWeek = groupedByMonth[monthKey];
                         
-                        // Calculate total hours for the month
+                        // Check if any entry in the month has non-REGAC
+                        let monthHasNonRegac = false;
                         let monthTotalSeconds = 0;
-                        Object.values(groupedByDate).forEach(entries => {
-                            monthTotalSeconds += entries.reduce((sum, e) => sum + e.durationSeconds, 0);
+                        Object.values(groupedByWeek).forEach(weekData => {
+                            Object.values(weekData).forEach(entries => {
+                                if (entries.some(e => !e.isRegac)) {
+                                    monthHasNonRegac = true;
+                                }
+                                entries.forEach(e => {
+                                    monthTotalSeconds += e.durationSeconds;
+                                });
+                            });
                         });
+                        
                         const monthTotalHours = Math.floor(monthTotalSeconds / 3600);
                         const monthTotalMinutes = Math.floor((monthTotalSeconds % 3600) / 60);
                         
@@ -176,17 +304,69 @@
                                         <div class="flex items-center space-x-3">
                                             <i data-lucide="calendar-days" class="w-6 h-6"></i>
                                             <h2 class="text-xl font-bold capitalize">${monthName}</h2>
+                                            ${monthHasNonRegac ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><i data-lucide="alert-triangle" class="w-3 h-3 mr-1"></i>Sin REGAC</span>' : ''}
                                         </div>
                                         <div class="flex items-center space-x-3">
-                                            <span class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold bg-white bg-opacity-20 backdrop-blur-sm">
-                                                <i data-lucide="clock" class="w-4 h-4 mr-2"></i>
-                                                Total: ${monthTotalHours}h ${monthTotalMinutes}m
+                                            <span id="month-hours-${monthKey}" class="inline-flex items-center px-4 py-2 rounded-lg text-base font-bold bg-purple-600 text-white">
+                                                <i data-lucide="calendar-clock" class="w-5 h-5 mr-2"></i>
+                                                ${monthTotalHours}h ${monthTotalMinutes}m
                                             </span>
                                             <i data-lucide="chevron-down" id="chevron-month-${monthKey}" class="w-6 h-6 transition-transform ${isCurrentMonth ? '' : 'rotate-180'}"></i>
                                         </div>
                                     </div>
                                 </div>
                                 <div id="month-${monthKey}" class="${monthExpandedClass}">
+                        `;
+                    
+                    // Sort weeks
+                    Object.keys(groupedByWeek).sort().reverse().forEach(weekKey => {
+                        const groupedByDate = groupedByWeek[weekKey];
+                        
+                        // Calculate total hours for the week and check for non-REGAC entries
+                        let weekTotalSeconds = 0;
+                        let weekHasNonRegac = false;
+                        const weekDates = [];
+                        Object.keys(groupedByDate).forEach(date => {
+                            weekDates.push(date);
+                            const entries = groupedByDate[date];
+                            weekTotalSeconds += entries.reduce((sum, e) => sum + e.durationSeconds, 0);
+                            if (entries.some(e => !e.isRegac)) {
+                                weekHasNonRegac = true;
+                            }
+                        });
+                        const weekTotalHours = Math.floor(weekTotalSeconds / 3600);
+                        const weekTotalMinutes = Math.floor((weekTotalSeconds % 3600) / 60);
+                        
+                        // Get week range
+                        const firstDate = Object.keys(groupedByDate).sort()[0];
+                        const weekRange = getWeekRange(firstDate + 'T00:00:00', monthKey);
+                        const weekNumber = weekKey.split('W')[1];
+                        
+                        // Check if current week
+                        const currentWeekData = getIsoWeekData(new Date().toISOString());
+                        const isCurrentWeek = weekKey === `${currentWeekData.year}-W${String(currentWeekData.week).padStart(2, '0')}`;
+                        const weekExpandedClass = isCurrentWeek ? '' : 'hidden';
+                        
+                        html += `
+                            <div class="mx-4 mt-4 mb-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg">
+                                <div class="px-5 py-3 cursor-pointer hover:from-indigo-100 hover:to-purple-100 transition" onclick="toggleWeek('${weekKey}')">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-3">
+                                            <i data-lucide="calendar-range" class="w-5 h-5 text-indigo-600"></i>
+                                            <span class="text-base font-semibold text-gray-800">Semana ${weekNumber}</span>
+                                            <span class="text-sm text-gray-600">(${weekRange.startStr} - ${weekRange.endStr})</span>
+                                            ${weekHasNonRegac ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><i data-lucide="alert-triangle" class="w-3 h-3 mr-1"></i>Sin REGAC</span>' : ''}
+                                        </div>
+                                        <div class="flex items-center space-x-3">
+                                            <span id="week-hours-${weekKey}" class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-indigo-600 text-white">
+                                                <i data-lucide="clock" class="w-4 h-4 mr-2"></i>
+                                                ${weekTotalHours}h ${weekTotalMinutes}m
+                                            </span>
+                                            <i data-lucide="chevron-down" id="chevron-week-${weekKey}" class="w-5 h-5 text-indigo-600 transition-transform ${isCurrentWeek ? '' : 'rotate-180'}"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="week-${weekKey}" class="pb-2 ${weekExpandedClass}">
                         `;
                     
                     Object.keys(groupedByDate).sort().reverse().forEach(date => {
@@ -210,8 +390,8 @@
                         const expandedClass = isToday ? '' : 'hidden';
 
                         html += `
-                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden">
-                                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition" onclick="toggleDay('${date}')">
+                            <div class="mx-4 bg-white rounded-lg shadow-sm border border-gray-200 mb-3 overflow-hidden">
+                                <div class="bg-gray-50 px-5 py-3 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition" onclick="toggleDay('${date}')">
                                     <div class="flex items-center space-x-3">
                                         <i data-lucide="calendar" class="w-5 h-5 text-indigo-600"></i>
                                         <h3 class="text-sm font-semibold text-gray-900">${formattedDate}</h3>
@@ -296,6 +476,13 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    // Close week div
+                    html += `
                                 </div>
                             </div>
                         `;
@@ -411,7 +598,9 @@
                         document.getElementById('entryDescription').value = entry.description || '';
                         document.getElementById('entryStartTime').value = '';
                         document.getElementById('entryEndTime').value = '';
-                        document.getElementById('entryDate').value = entry.date;
+                        // Set current date instead of the cloned entry's date
+                        const today = new Date().toISOString().split('T')[0];
+                        document.getElementById('entryDate').value = today;
                         document.getElementById('modalTitle').textContent = 'Clonar Registro de Horas';
                         document.getElementById('entryModal').classList.remove('hidden');
                         setTimeout(() => lucide.createIcons(), 50);
@@ -496,6 +685,71 @@
             chevron.classList.remove('rotate-180');
         } else {
             monthContent.classList.add('hidden');
+            chevron.classList.add('rotate-180');
+        }
+    }
+
+    function updateWeekDisplay(weekKey) {
+        const badge = document.getElementById('week-hours-' + weekKey);
+        if (!badge || !window.expectedHoursByWeek) return;
+
+        const expectedHours = window.expectedHoursByWeek[weekKey] || 0;
+        if (expectedHours === 0) return;
+
+        // Extract current hours from badge text
+        const text = badge.textContent;
+        const match = text.match(/(\d+)h (\d+)m/);
+        if (!match) return;
+
+        const currentHours = parseInt(match[1]);
+        const currentMinutes = parseInt(match[2]);
+        const currentTotal = currentHours + (currentMinutes / 60);
+
+        const expectedHoursInt = Math.floor(expectedHours);
+        const expectedMinutes = Math.round((expectedHours - expectedHoursInt) * 60);
+
+        badge.innerHTML = `
+            <i data-lucide="clock" class="w-4 h-4 mr-2"></i>
+            ${currentHours}h ${currentMinutes}m / ${expectedHoursInt}h ${expectedMinutes}m
+        `;
+        lucide.createIcons();
+    }
+
+    function updateMonthDisplay(monthKey) {
+        const badge = document.getElementById('month-hours-' + monthKey);
+        if (!badge || !window.expectedHoursByMonth) return;
+
+        const expectedHours = window.expectedHoursByMonth[monthKey] || 0;
+        if (expectedHours === 0) return;
+
+        // Extract current hours from badge text
+        const text = badge.textContent;
+        const match = text.match(/(\d+)h (\d+)m/);
+        if (!match) return;
+
+        const currentHours = parseInt(match[1]);
+        const currentMinutes = parseInt(match[2]);
+        const currentTotal = currentHours + (currentMinutes / 60);
+
+        const expectedHoursInt = Math.floor(expectedHours);
+        const expectedMinutes = Math.round((expectedHours - expectedHoursInt) * 60);
+
+        badge.innerHTML = `
+            <i data-lucide="calendar-clock" class="w-5 h-5 mr-2"></i>
+            ${currentHours}h ${currentMinutes}m / ${expectedHoursInt}h ${expectedMinutes}m
+        `;
+        lucide.createIcons();
+    }
+
+    function toggleWeek(weekKey) {
+        const weekContent = document.getElementById('week-' + weekKey);
+        const chevron = document.getElementById('chevron-week-' + weekKey);
+        
+        if (weekContent.classList.contains('hidden')) {
+            weekContent.classList.remove('hidden');
+            chevron.classList.remove('rotate-180');
+        } else {
+            weekContent.classList.add('hidden');
             chevron.classList.add('rotate-180');
         }
     }

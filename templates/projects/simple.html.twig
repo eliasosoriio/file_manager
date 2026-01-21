@@ -247,17 +247,21 @@
                                 pending: [],
                                 in_progress: [],
                                 recurring: [],
+                                on_hold: [],
                                 completed: []
                             };
                             
                             data.tasks.forEach(task => {
-                                tasksByStatus[task.status].push(task);
+                                if (tasksByStatus[task.status]) {
+                                    tasksByStatus[task.status].push(task);
+                                }
                             });
                             
                             const statusLabels = {
                                 pending: { name: 'Pendientes', colorClass: 'status-pending', icon: 'clock' },
                                 in_progress: { name: 'En Progreso', colorClass: 'status-in-progress', icon: 'loader' },
                                 recurring: { name: 'Recurrentes', colorClass: 'status-recurring', icon: 'repeat' },
+                                on_hold: { name: 'En Espera', colorClass: 'status-on-hold', icon: 'pause-circle' },
                                 completed: { name: 'Completadas', colorClass: 'status-completed', icon: 'check-circle' }
                             };
                             

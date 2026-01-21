@@ -244,17 +244,21 @@ function viewProjectTasks(projectId) {
                         pending: [],
                         in_progress: [],
                         recurring: [],
+                        on_hold: [],
                         completed: []
                     };
                     
                     data.tasks.forEach(task => {
-                        tasksByStatus[task.status].push(task);
+                        if (tasksByStatus[task.status]) {
+                            tasksByStatus[task.status].push(task);
+                        }
                     });
                     
                     const statusLabels = {
                         pending: { name: 'Pendientes', color: 'warning', icon: 'clock' },
                         in_progress: { name: 'En Progreso', color: 'primary', icon: 'play-circle' },
                         recurring: { name: 'Recurrentes', color: 'info', icon: 'repeat' },
+                        on_hold: { name: 'En Espera', color: 'secondary', icon: 'pause-circle' },
                         completed: { name: 'Completadas', color: 'success', icon: 'check-circle' }
                     };
                     

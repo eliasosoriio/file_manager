@@ -31,6 +31,10 @@ class TaskManagementController extends AbstractController
             if ($request->query->get('excludeCompleted') === 'true') {
                 $qb->where('t.status IN (:statuses)')
                    ->setParameter('statuses', ['pending', 'in_progress', 'recurring']);
+            } elseif ($request->query->get('status')) {
+                // Filtrar por estado específico si se proporciona
+                $qb->where('t.status = :status')
+                   ->setParameter('status', $request->query->get('status'));
             }
             
             $qb->orderBy('t.status', 'ASC')
