@@ -53,10 +53,10 @@
             </div>
             
             <div class="flex justify-end space-x-3">
-                <button type="button" onclick="hideModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                <button type="button" onclick="hideModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
                     Cancelar
                 </button>
-                <button type="submit" class="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
+                <button type="submit" class="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
                     Guardar
                 </button>
             </div>
@@ -118,7 +118,7 @@
                     cardContent += `
                         <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
                             <span class="text-sm font-medium text-gray-700">${schedule.startTime} - ${schedule.endTime}</span>
-                            <button onclick="deleteSchedule(${schedule.id})" class="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition" title="Eliminar">
+                            <button onclick="deleteSchedule(${schedule.id})" class="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded" title="Eliminar">
                                 <i data-lucide="trash-2" class="w-3 h-3"></i>
                             </button>
                         </div>
@@ -147,7 +147,7 @@
             }
 
             const card = `
-                <div class="bg-white rounded-lg shadow-sm border-2 border-${dayColor}-${hasSchedule ? '500' : '200'} overflow-hidden hover:shadow-md transition">
+                <div class="bg-white rounded-lg shadow-sm border-2 border-${dayColor}-${hasSchedule ? '500' : '200'} overflow-hidden hover:shadow-md">
                     <div class="bg-${dayColor}-${hasSchedule ? '500' : '100'} px-4 py-3 cursor-pointer" onclick="showModal(${day})">
                         <div class="flex items-center justify-between">
                             <h3 class="text-sm font-semibold ${hasSchedule ? 'text-white' : 'text-' + dayColor + '-900'}">${dayNames[day]}</h3>

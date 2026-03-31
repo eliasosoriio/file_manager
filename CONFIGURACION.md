@@ -1,6 +1,39 @@
 # 🔧 Guía de Configuración y Despliegue
 
-## 📦 Desplegar en otro servidor (Git)
+## � IMPORTANTE: Este proyecto usa Docker
+
+**TODOS los comandos de Symfony deben ejecutarse dentro del contenedor Docker:**
+
+```bash
+# ✅ CORRECTO - Ejecutar comandos dentro del contenedor
+docker compose exec app php bin/console cache:clear
+docker compose exec app php bin/console doctrine:migrations:migrate
+docker compose exec app composer install
+
+# ❌ INCORRECTO - NO ejecutar comandos directamente
+php bin/console cache:clear  # Esto NO funcionará
+```
+
+**Comandos útiles de Docker:**
+
+```bash
+# Ver estado de contenedores
+docker compose ps
+
+# Limpiar caché de Symfony
+docker compose exec app php bin/console cache:clear
+
+# Acceder al contenedor
+docker compose exec app bash
+
+# Ver logs
+docker compose logs -f app
+
+# Reiniciar contenedores
+docker compose restart
+```
+
+## �📦 Desplegar en otro servidor (Git)
 
 ### 1️⃣ Subir a Git
 
